@@ -1,0 +1,86 @@
+plugins {
+    id 'com.github.hierynomus.license' version '0.11.0'
+    id 'com.github.johnrengelman.shadow' version '1.2.3'
+}
+
+group 'com.github.jonathanxd'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'idea'
+apply plugin: 'java'
+apply plugin: 'license'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+license {
+    header rootProject.file("LICENSE_HEADER")
+}
+
+defaultTasks 'licenseFormat', 'build', 'test', 'jar', 'shadowJar'
+
+sourceCompatibility = 1.8
+
+
+repositories {
+    mavenCentral()
+    maven { url "https://jitpack.io" }
+    maven { url "http://dl.bintray.com/kotlin/kotlin-eap-1.1" }
+}
+
+dependencies {
+    compile 'com.github.JonathanxD:CodeAPI-BytecodeWriter:3.1.6-3.1.4'
+    compile 'com.github.JonathanxD:CodeAPI-SourceWriter:3.1.6-3.1.6'
+    compile 'com.github.JonathanxD:JwIUtils:3.6.0'
+    testCompile "junit:junit:4.12"
+}
+
+jar {
+    from "$rootProject.rootDir/LICENSE"
+
+    manifest {
+        attributes 'Implementation-Title': baseName,
+                'Implementation-Version': version
+    }
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives sourcesJar
+    archives javadocJar
+    archives shadowJar
+}
+
+license {
+    ext.name = project.name
+    ext.description = project.description
+    ext.organization = project.organization
+    ext.url = project.url
+    ext.year = Calendar.getInstance().get(Calendar.YEAR)
+
+    exclude "**/*.info"
+    exclude "**/*.md"
+    exclude "res/**"
+    exclude "src/main/resources/**"
+    exclude "src/test/resources/**"
+
+    header rootProject.file('LICENSE_HEADER')
+
+    sourceSets = project.sourceSets
+
+    ignoreFailures false
+    strictCheck true
+
+    mapping {
+        java = 'SLASHSTAR_STYLE'
+        kt = 'SLASHSTAR_STYLE'
+    }
+}
+
