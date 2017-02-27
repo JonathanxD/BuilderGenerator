@@ -32,6 +32,12 @@ package com.github.jonathanxd.buildergenerator;
  *
  * Provide {@link #build()} method.
  *
+ * This class is only an example of how a {@code Builder} class would be. Extending this class will
+ * make your project depend on {@code BuilderGenerator} project.
+ *
+ * Create your own {@code Builder} class or use an alternative existing class if you do not want to
+ * depend on {@code BuilderGenerator}.
+ *
  * @param <T> Type to build.
  * @param <B> Builder type.
  */

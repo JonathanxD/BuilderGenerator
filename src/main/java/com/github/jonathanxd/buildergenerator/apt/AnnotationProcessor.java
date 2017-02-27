@@ -28,7 +28,6 @@
 package com.github.jonathanxd.buildergenerator.apt;
 
 import com.github.jonathanxd.buildergenerator.CodeAPIBuilderGenerator;
-import com.github.jonathanxd.buildergenerator.ErrorHandler;
 import com.github.jonathanxd.buildergenerator.annotation.Conversions;
 import com.github.jonathanxd.buildergenerator.annotation.GenBuilder;
 import com.github.jonathanxd.buildergenerator.annotation.PropertyInfo;
@@ -56,7 +55,6 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -97,7 +95,6 @@ public class AnnotationProcessor extends AbstractProcessor {
     private boolean generateSource = true;
     private ProcessingEnvironment processingEnvironment;
     private Messager messager;
-    private ErrorHandler errorHandler;
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
@@ -175,33 +172,6 @@ public class AnnotationProcessor extends AbstractProcessor {
             }
         }
 
-        /*for (Element element : roundEnv.getElementsAnnotatedWith(Inline.class)) {
-            try {
-                if (element.getKind() == ElementKind.METHOD) {
-                    ExecutableElement executableElement = (ExecutableElement) element;
-
-                    Element enclosingElement = executableElement.getEnclosingElement();
-
-                    if (!(enclosingElement instanceof TypeElement)) {
-                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Enclosing element of method must be a Type.", enclosingElement);
-                        return false;
-                    }
-
-                    CodeType codeType = TypeElementUtil.toCodeType((TypeElement) enclosingElement);
-
-                    if (!(codeType instanceof LoadedCodeType<?>)) {
-                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Method annotated with @Inline is not available at compile-time classpath.", enclosingElement);
-                        return false;
-                    }
-                }
-            } catch (Throwable t) {
-                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "An error occurred '" + t.toString() + "'", element);
-                t.printStackTrace(new MessagerPrint(this.getMessager()));
-                return false;
-            }
-
-        }*/
-
         for (Element element : roundEnv.getElementsAnnotatedWith(GenBuilder.class)) {
             try {
                 boolean isConstructor = element.getKind() == ElementKind.CONSTRUCTOR;
@@ -209,8 +179,10 @@ public class AnnotationProcessor extends AbstractProcessor {
                 if (isConstructor || element.getKind() == ElementKind.METHOD) {
                     ExecutableElement executableElement = (ExecutableElement) element;
 
-                    if (!isConstructor && !executableElement.getModifiers().contains(Modifier.STATIC)) {
-                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Factory method must be static.", element);
+                    if (!isConstructor
+                            && !executableElement.getModifiers().contains(Modifier.PUBLIC)
+                            || !executableElement.getModifiers().contains(Modifier.STATIC)) {
+                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Factory method must be public and static.", element);
                         return false;
                     }
 
@@ -233,7 +205,6 @@ public class AnnotationProcessor extends AbstractProcessor {
                         factoryResultType = TypeElementUtil.toCodeType(executableElement.getReturnType(), processingEnvironment.getElementUtils());
                         factoryMethodName = executableElement.getSimpleName().toString();
                     }
-
 
                     Optional<AnnotationMirror> mirrorOptional = AnnotatedConstructUtil.getAnnotationMirror(element, BUILDER_GEN_ANNOTATION_CLASS);
 
@@ -365,11 +336,11 @@ public class AnnotationProcessor extends AbstractProcessor {
                                     GenericType genericType = nameTypePair._2();
                                     CodeType type = genericType;
 
-                                    if(type.getCanonicalName().equals("java.util.Optional") && parameterType.is(type)) {
+                                    if (type.getCanonicalName().equals("java.util.Optional") && parameterType.is(type)) {
 
                                         type = genericType.getBounds()[0].getType();
 
-                                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property setter method '" + simpleName + "' of property '" + s + "' must receive '"+type+"' instead of direct 'Optional' ("+genericType+") type.", method);
+                                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property setter method '" + simpleName + "' of property '" + s + "' must receive '" + type + "' instead of direct 'Optional' (" + genericType + ") type.", method);
                                     } else {
 
                                         if (params.size() != 1
@@ -393,7 +364,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                             }
                         }
 
-                        if(!any) {
+                        if (!any) {
                             propertySpecs.add(new PropertySpec(nameTypePair._1(), nameTypePair._2(), false, null, null));
                         }
                     }

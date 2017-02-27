@@ -31,14 +31,15 @@ import java.lang.annotation.Target;
 
 /**
  * Specify the validator method. Validator method normally throws {@link IllegalArgumentException}
- * when the input value is invalid.
+ * or {@link IllegalStateException} when the input value is invalid.
  *
- * The validator method MUST be static, return {@code void} and receive a parameter of the same type
- * as property type or a super type of property type, a parameter of type {@link String} to receive
- * property name and a parameter of type {@link Class} to receive property type. These rules only
- * applies to non-inline validators. Validators annotated with {@link Inline} has different rules,
- * the rules depends on the implementation of the {@link com.github.jonathanxd.buildergenerator.BuilderGenerator}.
- * {@link Inline} documentation explain the rules of default generator.
+ * The validator method must be static, return {@code void} and receive a parameter of the same type
+ * as {@code property type} or a {@code super type} of property type, a parameter of type {@link
+ * String} to receive {@code property name} and a parameter of type {@link Class} to receive {@code
+ * property type}. These rules only applies to non-inline validators. Validators annotated with
+ * {@link Inline} has different rules, the rules depends on the implementation of the {@link
+ * com.github.jonathanxd.buildergenerator.BuilderGenerator}. {@link Inline} documentation explain
+ * these rules.
  */
 @Target({})
 public @interface Validator {

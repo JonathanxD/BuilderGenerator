@@ -40,6 +40,14 @@ public final class FilerUtil {
     }
 
 
+    /**
+     * Gets the {@link FileObject} in the {@code pkg/name} location.
+     *
+     * @param filer Filer.
+     * @param pkg   Package.
+     * @param name  Name.
+     * @return {@link Optional} of found {@link FileObject}, or empty {@link Optional} if not found.
+     */
     public static Optional<FileObject> get(Filer filer, String pkg, String name) {
 
         try {

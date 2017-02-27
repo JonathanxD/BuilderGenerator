@@ -30,9 +30,10 @@ package com.github.jonathanxd.buildergenerator.annotation;
 import java.lang.annotation.Target;
 
 /**
+ * Reference to a method, at compile-time, if the method doesn't exists, the compilation will fail
+ * with an error.
  *
- * Reference to a method.
- *
+ * @see com.github.jonathanxd.buildergenerator.apt.MethodRefValidator
  */
 @Target({})
 public @interface MethodRef {
@@ -46,6 +47,7 @@ public @interface MethodRef {
 
     /**
      * Method return type.
+     *
      * @return Method return type.
      */
     Class<?> returnType() default Default.class;

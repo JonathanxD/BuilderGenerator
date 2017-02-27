@@ -36,18 +36,42 @@ public final class Default {
         throw new IllegalStateException();
     }
 
+    /**
+     * Returns true if {@code validator} is default.
+     *
+     * @param validator Validator
+     * @return True if {@code validator} is default.
+     */
     public static boolean isDefault(Validator validator) {
         return validator.value().value() == Default.class;
     }
 
+    /**
+     * Returns true if {@code methodRef} is default.
+     *
+     * @param methodRef Method reference.
+     * @return True if {@code methodRef} is default.
+     */
     public static boolean isDefault(MethodRef methodRef) {
         return methodRef.value() == Default.class;
     }
 
+    /**
+     * Returns true if {@code methodRef} annotation is default.
+     *
+     * @param methodRef Method reference.
+     * @return True if {@code methodRef} annotation is default.
+     */
     public static boolean isDefaultMethodRef(Annotation methodRef) {
         return ((CodeType) methodRef.getValues().get("value")).is(CodeAPI.getJavaType(Default.class));
     }
 
+    /**
+     * Returns true if {@code validator} annotation is default.
+     *
+     * @param validator Validator
+     * @return True if {@code validator} annotation is default.
+     */
     public static boolean isDefaultValidator(Annotation validator) {
         return isDefaultMethodRef(((Annotation) validator.getValues().get("value")));
     }

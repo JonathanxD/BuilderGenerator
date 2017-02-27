@@ -35,6 +35,8 @@ import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
 import com.github.jonathanxd.codeapi.type.CodeType;
 import com.github.jonathanxd.iutils.object.Pair;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -44,9 +46,27 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.Elements;
 
+/**
+ * Method resolver. This class finds the referenced method.
+ */
 public class AptResolver {
 
-
+    /**
+     * Resolves the method reference.
+     *
+     * @param methodRefAnnotation {@link com.github.jonathanxd.buildergenerator.annotation.MethodRef}
+     *                            annotation.
+     * @param rtype               Inferred return type (if annotation property is defined, this
+     *                            value will be ignored).
+     * @param ptypes              Inferred parameter types (if annotation property is defined, this
+     *                            value will be ignored).
+     * @param elements            Element utilities.
+     * @return Null if cannot convert the annotation to {@link MethodTypeSpec} or a Pair of {@link
+     * MethodTypeSpec method specification} and {@link ExecutableElement found method} (or null
+     * {@link ExecutableElement} if the method cannot be found).
+     * @see Conversions.CAPI#toMethodSpec(Annotation, CodeType, CodeType[])
+     */
+    @Nullable
     public static Pair<MethodTypeSpec, ExecutableElement> resolveMethodRef(Annotation methodRefAnnotation, CodeType rtype, CodeType[] ptypes, Elements elements) {
 
         Optional<MethodTypeSpec> methodTypeSpec = Conversions.CAPI.toMethodSpec(methodRefAnnotation, rtype, ptypes);

@@ -33,7 +33,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Property specifications.
+ * Property specification.
+ *
+ * To specify specification, annotated the {@code with} method of the {@code Builder} inner class of
+ * the {@link GenBuilder#base() base class}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
@@ -51,12 +54,12 @@ public @interface PropertyInfo {
     /**
      * Default property value provider method.
      *
-     * If the target method is annotated with {@link Inline} the method MUST follow the rules of
+     * If the target method is annotated with {@link Inline} the method must follow the rules of
      * inlining.
      *
      * Unless the target method is annotated with {@link Inline}, it must return a value of a type
-     * assignable to property type and take two parameters: property name of type {@link String} and
-     * property type of type {@link Class}).
+     * assignable to property type and take two parameters: {@code property name} of type {@link
+     * String} and {@code property type} of type {@link Class}).
      *
      * @return Default value provider method.
      */
@@ -65,13 +68,13 @@ public @interface PropertyInfo {
     /**
      * Validator specification.
      *
-     * If the target method is annotated with {@link Inline} the method MUST follow the rules of
+     * If the target method is annotated with {@link Inline} the method must follow the rules of
      * inlining.
      *
-     * Unless the target method is annotated with {@link Inline}, it must have return void type take
-     * three parameters: value to validate (type must be the same as the property type or a super
-     * type of property type), property name of type {@link String} and Property type of type {@link
-     * Class}.
+     * Unless the target method is annotated with {@link Inline}, it must return {@code void} and
+     * take three parameters: value to validate (type must be the same as the {@code property type}
+     * or a super type of property type), {@code property name} of type {@link String} and {@code
+     * property type} of type {@link Class}.
      *
      * @return Validator specification.
      */

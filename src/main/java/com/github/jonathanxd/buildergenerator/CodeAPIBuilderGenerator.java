@@ -42,7 +42,6 @@ import com.github.jonathanxd.codeapi.base.FieldAccess;
 import com.github.jonathanxd.codeapi.base.FieldDeclaration;
 import com.github.jonathanxd.codeapi.base.MethodInvocation;
 import com.github.jonathanxd.codeapi.base.TypeDeclaration;
-import com.github.jonathanxd.codeapi.base.Typed;
 import com.github.jonathanxd.codeapi.base.VariableBase;
 import com.github.jonathanxd.codeapi.builder.ClassDeclarationBuilder;
 import com.github.jonathanxd.codeapi.builder.FieldDeclarationBuilder;
@@ -62,7 +61,6 @@ import com.github.jonathanxd.codeapi.literal.Literals;
 import com.github.jonathanxd.codeapi.source.gen.PlainSourceGenerator;
 import com.github.jonathanxd.codeapi.type.CodeType;
 import com.github.jonathanxd.codeapi.type.Generic;
-import com.github.jonathanxd.codeapi.type.GenericType;
 import com.github.jonathanxd.codeapi.type.PlainCodeType;
 import com.github.jonathanxd.iutils.collection.CollectionUtils;
 import com.github.jonathanxd.iutils.object.Pair;
@@ -76,6 +74,17 @@ import java.util.stream.Collectors;
 
 import kotlin.text.StringsKt;
 
+/**
+ * Uses {@code CodeAPI} to generate {@code Builder} classes. {@link Bytecode} generates an bytecode
+ * classes and {@link Source} generate source classes. Because of modular nature of {@code CodeAPI},
+ * you only need dependency on the {@code CodeAPI-SourceWriter} when using {@code BuilderGenerator}
+ * as annotation processor.
+ *
+ * Runtime builder generator is not available yet, but it will only require dependency on the {@code
+ * CodeAPI-BytecodeWriter}. Do not reference {@link Source Source class} if the class path do not
+ * contains {@code CodeAPI-SourceWriter} module and do not reference {@link Bytecode Bytecode class}
+ * if the class path do not contains {@code CodeAPI-BytecodeWriter} module.
+ */
 public final class CodeAPIBuilderGenerator {
 
     private CodeAPIBuilderGenerator() {

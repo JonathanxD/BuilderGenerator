@@ -33,9 +33,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks the {@link Validator} or {@link MethodRef} to be inlined. If the {@link
- * com.github.jonathanxd.buildergenerator.BuilderGenerator} fails to inline (because of a
- * incompatible return value), they will throw a {@link IllegalStateException}.
+ * Marks the {@link Validator} or {@link MethodRef} to be inlined.
  *
  * This operation depends on the implementation of the {@link com.github.jonathanxd.buildergenerator.BuilderGenerator},
  * the default generator will require that method return a {@link com.github.jonathanxd.codeapi.CodePart},
@@ -43,13 +41,13 @@ import java.lang.annotation.Target;
  * this parameter is the {@code property info}.
  *
  * For {@link PropertyInfo#validator()}, a second parameter is required, this parameter must be of
- * {@link com.github.jonathanxd.codeapi.CodePart}, this parameter is the access to value to
+ * {@link com.github.jonathanxd.codeapi.CodePart} type, this parameter is the access to value to
  * validate.
  *
  * For {@link PropertyInfo#defaultValue()} no additional parameters is required.
  *
- * Note: This annotation only works for methods available at compile-time, using methods not
- * available at compile time or methods that isn't compiled yet is an error.
+ * Note: This annotation only works for compiled methods, {@link com.github.jonathanxd.buildergenerator.apt.MethodRefValidator}
+ * will throw a exception if a non-compiled method is referenced from a {@link MethodRef} annotation.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)

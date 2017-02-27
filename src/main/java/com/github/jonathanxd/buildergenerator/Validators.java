@@ -32,7 +32,6 @@ import com.github.jonathanxd.codeapi.CodeAPI;
 import com.github.jonathanxd.codeapi.CodePart;
 import com.github.jonathanxd.codeapi.base.Concat;
 import com.github.jonathanxd.codeapi.base.ThrowException;
-import com.github.jonathanxd.codeapi.base.VariableAccess;
 import com.github.jonathanxd.codeapi.base.VariableBase;
 import com.github.jonathanxd.codeapi.helper.ConcatHelper;
 import com.github.jonathanxd.codeapi.literal.Literals;
@@ -40,6 +39,13 @@ import com.github.jonathanxd.codeapi.operator.Operators;
 
 import java.util.Collections;
 
+/**
+ * Default validators.
+ *
+ * All validators here are {@link Inline} to avoid dependency on {@code BytecodeGenerator}. This
+ * means that you don't need to have {@code BytecodeGenerator} in class path even you reference
+ * these methods from {@link com.github.jonathanxd.buildergenerator.annotation.MethodRef}.
+ */
 public final class Validators {
     private Validators() {
 
@@ -81,11 +87,6 @@ public final class Validators {
                         throwException
                 ));
 
-    }
-
-    @Inline
-    public static CodePart M1(VariableBase base) {
-        return Literals.INT(-1);
     }
 
 

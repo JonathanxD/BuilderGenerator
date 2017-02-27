@@ -74,33 +74,6 @@ public class AnnotationMirrorUtil {
                 || o instanceof Long)
             return o;
 
-        /*if (o instanceof String)
-            return Literals.STRING((String) o);
-
-        if (o instanceof Boolean)
-            return Literals.BOOLEAN((Boolean) o);
-
-        if (o instanceof Byte)
-            return Literals.BYTE((Byte) o);
-
-        if (o instanceof Short)
-            return Literals.SHORT((Short) o);
-
-        if (o instanceof Character)
-            return Literals.CHAR((Character) o);
-
-        if (o instanceof Integer)
-            return Literals.INT((Integer) o);
-
-        if (o instanceof Float)
-            return Literals.FLOAT((Float) o);
-
-        if (o instanceof Double)
-            return Literals.DOUBLE((Double) o);
-
-        if (o instanceof Long)
-            return Literals.LONG((Long) o);*/
-
         if (o instanceof TypeMirror)
             return GenericTypeUtil.fromSourceString(o.toString(), new TypeResolver(elements));
 

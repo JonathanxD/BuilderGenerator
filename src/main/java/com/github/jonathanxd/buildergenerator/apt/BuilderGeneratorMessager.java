@@ -35,6 +35,9 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.tools.Diagnostic;
 
+/**
+ * Wraps {@link Messager} and append {@code BuilderGenerator} name at the start of all messages.
+ */
 public final class BuilderGeneratorMessager implements Messager {
 
     private final Messager aptMessager;

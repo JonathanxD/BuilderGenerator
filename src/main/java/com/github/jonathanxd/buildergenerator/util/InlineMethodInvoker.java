@@ -31,5 +31,8 @@ import com.github.jonathanxd.codeapi.CodePart;
 
 import java.util.function.Function;
 
+/**
+ * Invoker of a {@link com.github.jonathanxd.buildergenerator.annotation.Inline Inlinable method}.
+ */
 public interface InlineMethodInvoker extends Function<Object[], CodePart> {
 }

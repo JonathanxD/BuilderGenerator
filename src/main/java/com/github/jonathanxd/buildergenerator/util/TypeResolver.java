@@ -38,15 +38,14 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 
+/**
+ * Type resolver, resolves class literal.
+ *
+ * @see TypeInfo#resolveClass(String)
+ */
 public final class TypeResolver implements Function<String, CodeType> {
 
-    public static final TypeResolver INSTANCE = new TypeResolver();
-
     private final Elements elements;
-
-    private TypeResolver() {
-        this(null);
-    }
 
     public TypeResolver(Elements elements) {
         this.elements = elements;
@@ -58,7 +57,7 @@ public final class TypeResolver implements Function<String, CodeType> {
         try {
             return CodeAPI.getJavaType(TypeInfo.resolveClass(s));
         } catch (Exception e) {
-            if(elements != null) {
+            if (elements != null) {
                 TypeElement typeElement = elements.getTypeElement(s);
 
                 if (typeElement != null) {

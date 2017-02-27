@@ -35,17 +35,31 @@ import com.github.jonathanxd.iutils.type.TypeInfo;
 
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 
+/**
+ * {@link TypeElement} and {@link TypeMirror} conversion to {@link CodeType}.
+ */
 public class TypeElementUtil {
 
-
+    /**
+     * Convert {@link TypeMirror} to {@link CodeType}.
+     *
+     * @param typeMirror Type mirror.
+     * @param elements   Element utils to resolve type.
+     * @return {@link CodeType} corresponding to {@link TypeMirror}.
+     */
     public static CodeType toCodeType(TypeMirror typeMirror, Elements elements) {
         return GenericTypeUtil.fromSourceString(typeMirror.toString(), new TypeResolver(elements));
     }
 
+    /**
+     * Convert {@link TypeElement} to {@link CodeType}.
+     *
+     * @param typeElement Type element.
+     * @return {@link CodeType} corresponding to {@link TypeElement}.
+     */
     public static CodeType toCodeType(TypeElement typeElement) {
         return GenericTypeUtil.fromSourceString(typeElement.getQualifiedName().toString(), s -> {
             try {
@@ -56,6 +70,14 @@ public class TypeElementUtil {
         });
     }
 
+    /**
+     * Convert {@link TypeMirror} to {@link TypeElement}.
+     *
+     * @param typeMirror Type mirror.
+     * @param elements   Element utils to resolve type.
+     * @return Type element.
+     * @see Elements#getTypeElement(CharSequence)
+     */
     public static TypeElement toTypeElement(TypeMirror typeMirror, Elements elements) {
         return elements.getTypeElement(GenericTypeUtil.fromSourceString(typeMirror.toString(), new TypeResolver(elements)).getCanonicalName());
     }

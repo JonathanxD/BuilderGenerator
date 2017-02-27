@@ -35,6 +35,9 @@ import java.util.Optional;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.util.Elements;
 
+/**
+ * Helper class to work with {@link AnnotationMirror}.
+ */
 public final class AnnotationMirrorHelper {
 
     private final AnnotationMirror annotationMirror;
@@ -61,7 +64,6 @@ public final class AnnotationMirrorHelper {
     }
 
 
-
     /**
      * {@link #get(String)}
      *
@@ -74,8 +76,4 @@ public final class AnnotationMirrorHelper {
         return this.get(name).orElseThrow(() -> new NullPointerException("Required property '" + name + "' cannot be found in annotation '" + this.annotation + "' (Mirror: " + this.annotationMirror + ")"));
     }
 
-
-    public AnnotationMirror getAnnotationMirror() {
-        return this.annotationMirror;
-    }
 }

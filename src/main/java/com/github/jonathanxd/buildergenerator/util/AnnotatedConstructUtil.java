@@ -38,9 +38,18 @@ public final class AnnotatedConstructUtil {
         throw new IllegalStateException();
     }
 
+    /**
+     * Gets the {@link AnnotationMirror} corresponding to {@code annotationName} in {@link
+     * AnnotatedConstruct annotated element}.
+     *
+     * @param annotatedConstruct Annotated element.
+     * @param annotationName     Annotation type name (full qualified).
+     * @return {@link Optional} of found {@link AnnotationMirror}, or empty {@link Optional} if not
+     * found.
+     */
     public static Optional<AnnotationMirror> getAnnotationMirror(AnnotatedConstruct annotatedConstruct, String annotationName) {
         for (AnnotationMirror annotationMirror : annotatedConstruct.getAnnotationMirrors()) {
-            if(annotationMirror.getAnnotationType().toString().equals(annotationName))
+            if (annotationMirror.getAnnotationType().toString().equals(annotationName))
                 return Optional.of(annotationMirror);
         }
 

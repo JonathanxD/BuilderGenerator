@@ -35,7 +35,7 @@ import java.lang.annotation.Target;
 /**
  * Generates a builder.
  *
- * Non-static methods is not valid.
+ * Only constructors and static factory methods is valid.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.CONSTRUCTOR, ElementType.METHOD})

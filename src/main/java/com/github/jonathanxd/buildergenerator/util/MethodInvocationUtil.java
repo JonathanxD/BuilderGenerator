@@ -27,6 +27,7 @@
  */
 package com.github.jonathanxd.buildergenerator.util;
 
+import com.github.jonathanxd.buildergenerator.annotation.PropertyInfo;
 import com.github.jonathanxd.buildergenerator.spec.BuilderSpec;
 import com.github.jonathanxd.buildergenerator.spec.PropertySpec;
 import com.github.jonathanxd.codeapi.CodeAPI;
@@ -41,30 +42,62 @@ import com.github.jonathanxd.iutils.collection.CollectionUtils;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Conversion to {@link MethodInvocation}.
+ */
 public final class MethodInvocationUtil {
 
     private MethodInvocationUtil() {
         throw new IllegalStateException();
     }
 
+    /**
+     * Converts a {@link PropertyInfo#validator()} to {@link MethodInvocation}.
+     *
+     * @param methodTypeSpec Validator method specification.
+     * @param valueAccess    Access to value to validate.
+     * @param propertySpec   Property specification.
+     * @return Invocation of the validator method.
+     */
     public static MethodInvocation validationToInvocation(MethodTypeSpec methodTypeSpec, CodePart valueAccess, PropertySpec propertySpec) {
         return MethodInvocationUtil.toInvocation(methodTypeSpec, CollectionUtils.listOf(valueAccess, Literals.STRING(propertySpec.getName()), Literals.CLASS(propertySpec.getType())));
     }
 
+    /**
+     * Converts a {@link PropertyInfo#defaultValue()} to {@link MethodInvocation}.
+     *
+     * @param methodTypeSpec Default value method specification.
+     * @param propertySpec   Property specification.
+     * @return Invocation of default value method.
+     */
     public static MethodInvocation defaultValueToInvocation(MethodTypeSpec methodTypeSpec, PropertySpec propertySpec) {
         return MethodInvocationUtil.toInvocation(methodTypeSpec, CollectionUtils.listOf(Literals.STRING(propertySpec.getName()), Literals.CLASS(propertySpec.getType())));
     }
 
+    /**
+     * Convert {@link MethodTypeSpec} to {@link MethodInvocation}.
+     *
+     * @param methodTypeSpec Method specification.
+     * @param arguments      Arguments to pass to method.
+     * @return Method invocation.
+     */
     public static MethodInvocation toInvocation(MethodTypeSpec methodTypeSpec, List<CodePart> arguments) {
         return CodeAPI.invokeStatic(methodTypeSpec.getLocalization(), methodTypeSpec.getMethodName(), methodTypeSpec.getTypeSpec(), arguments);
     }
 
+    /**
+     * Convert {@link BuilderSpec} factory method to {@link MethodInvocation}.
+     *
+     * @param builderSpec     Builder specification.
+     * @param propertiesTypes Property types.
+     * @param arguments       Arguments to pass to factory method.
+     */
     public static MethodInvocation createFactoryInvocation(BuilderSpec builderSpec, List<CodeType> propertiesTypes, List<CodePart> arguments) {
         Optional<String> factoryMethodName = builderSpec.getFactoryMethodName();
 
         TypeSpec typeSpec = new TypeSpec(builderSpec.getFactoryResultType(), propertiesTypes);
 
-        if(factoryMethodName.isPresent()) {
+        if (factoryMethodName.isPresent()) {
             return CodeAPI.invokeStatic(builderSpec.getFactoryClass(), factoryMethodName.get(), typeSpec, arguments);
         } else {
             return CodeAPI.invokeConstructor(builderSpec.getFactoryClass(), typeSpec, arguments);

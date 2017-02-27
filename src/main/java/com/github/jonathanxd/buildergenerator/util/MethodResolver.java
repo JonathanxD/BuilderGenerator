@@ -28,6 +28,7 @@
 package com.github.jonathanxd.buildergenerator.util;
 
 import com.github.jonathanxd.buildergenerator.annotation.Inline;
+import com.github.jonathanxd.buildergenerator.annotation.PropertyInfo;
 import com.github.jonathanxd.buildergenerator.spec.PropertySpec;
 import com.github.jonathanxd.codeapi.CodePart;
 import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
@@ -36,31 +37,53 @@ import com.github.jonathanxd.codeapi.type.LoadedCodeType;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 
 import kotlin.collections.ArraysKt;
 
+/**
+ * Resolves {@link Inline Inlinable method}.
+ */
 public final class MethodResolver {
 
     private MethodResolver() {
         throw new IllegalStateException();
     }
 
-
+    /**
+     * Resolve the {@link PropertyInfo#validator()} method.
+     *
+     * @param propertySpec Property specification.
+     * @return {@link Optional} of the validator invoker, or an empty {@link Optional} if the method
+     * cannot be found.
+     */
     public static Optional<InlineMethodInvoker> resolveValidator(PropertySpec propertySpec) {
-        return resolve(propertySpec, propertySpec::getValidatorSpec);
+        return MethodResolver.resolve(propertySpec::getValidatorSpec);
     }
 
+    /**
+     * Resolve the {@link PropertyInfo#defaultValue()} method.
+     *
+     * @param propertySpec Property specification.
+     * @return {@link Optional} of the default value invoker, or an empty {@link Optional} if the
+     * method cannot be found.
+     */
     public static Optional<InlineMethodInvoker> resolveDefaultMethod(PropertySpec propertySpec) {
-        return resolve(propertySpec, propertySpec::getDefaultValueSpec);
+        return MethodResolver.resolve(propertySpec::getDefaultValueSpec);
     }
 
 
-    public static Optional<InlineMethodInvoker> resolve(PropertySpec propertySpec, Supplier<Optional<MethodTypeSpec>> consumer) {
-        Optional<MethodTypeSpec> validatorSpec = consumer.get();
+    /**
+     * Resolve the {@link Inline inlinable} and returns the invoker of the method.
+     *
+     * @param supplier Provider of {@link MethodTypeSpec inlinable method specification}.
+     * @return {@link Optional} of the inline method invoker, or an empty {@link Optional} if the
+     * method cannot be found.
+     */
+    public static Optional<InlineMethodInvoker> resolve(Supplier<Optional<MethodTypeSpec>> supplier) {
+        Optional<MethodTypeSpec> validatorSpec = supplier.get();
 
         if (!validatorSpec.isPresent())
             return Optional.empty();
@@ -81,6 +104,13 @@ public final class MethodResolver {
     }
 
 
+    /**
+     * Resolves the {@link Method} instance from {@link MethodTypeSpec}.
+     *
+     * @param methodTypeSpec Method specification.
+     * @return {@link Optional} of the found {@link Method}, or empty {@link Optional} if method
+     * cannot be found.
+     */
     public static Optional<Method> resolve(MethodTypeSpec methodTypeSpec) {
 
         Class<?> localization = MethodResolver.getClassOrNull(methodTypeSpec.getLocalization());
@@ -88,7 +118,7 @@ public final class MethodResolver {
         Class<?> returnType = MethodResolver.getClassOrNull(methodTypeSpec.getTypeSpec().getReturnType());
         Class<?>[] parameterTypes = methodTypeSpec.getTypeSpec().getParameterTypes().stream().map(MethodResolver::getClassOrNull).toArray(Class[]::new);
 
-        if(localization == null || returnType == null || ArraysKt.any(parameterTypes, Objects::isNull))
+        if (localization == null || returnType == null || ArraysKt.any(parameterTypes, Objects::isNull))
             return Optional.empty();
 
         try {
@@ -108,16 +138,16 @@ public final class MethodResolver {
 
     }
 
+    /**
+     * Gets {@link Class} instance from {@link CodeType}.
+     *
+     * @param codeType Type to extract {@link Class} instance.
+     * @return {@link Class} instance if the {@link CodeType} is an {@link LoadedCodeType}, null
+     * otherwise.
+     */
     private static Class<?> getClassOrNull(CodeType codeType) {
         if (!(codeType instanceof LoadedCodeType<?>))
             return null;
-
-        return ((LoadedCodeType<?>) codeType).getLoadedType();
-    }
-
-    private static Class<?> getClass(CodeType codeType) {
-        if (!(codeType instanceof LoadedCodeType<?>))
-            throw new IllegalArgumentException("Type '" + codeType + "' is not a runtime type.");
 
         return ((LoadedCodeType<?>) codeType).getLoadedType();
     }
