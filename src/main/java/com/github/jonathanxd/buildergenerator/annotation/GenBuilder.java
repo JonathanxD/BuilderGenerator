@@ -57,16 +57,6 @@ public @interface GenBuilder {
     Class<?> base() default Default.class;
 
     /**
-     * Base implementation class.
-     *
-     * If the annotation is present in a constructor, the enclosing class will be used, if the
-     * annotation is present in a factory method, this property must be defined.
-     *
-     * @return Implementation class.
-     */
-    Class<?> factory() default Default.class;
-
-    /**
      * Qualified name of the builder.
      *
      * If this property is not defined, {@link com.github.jonathanxd.buildergenerator.apt.AnnotationProcessor}
