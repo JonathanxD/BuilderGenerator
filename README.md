@@ -24,7 +24,7 @@ BuilderGenerator is designed to generate Builders for immutable objects, base cl
 
 ## Base classes
 
-Base class provide a set of methods to `get` properties and a `Builder` class to provide builder methods for class properties and optionally specify properties specification.
+Base class should provide properties getter methods and a `Builder` class to provide builder methods for class properties and optionally specify properties specification.
 
 Example of valid base class:
 
