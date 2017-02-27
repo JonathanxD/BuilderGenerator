@@ -24,7 +24,7 @@ BuilderGenerator is designed to generate Builders for immutable objects, base cl
 
 ## Base classes
 
-Base classes are classes that provide getter methods for properties. This class must provide a `Builder` class that standardize builder methods. Builder methods (`with` methods) can also provide property information, see [PropertyInfo](https://github.com/JonathanxD/BuilderGenerator/blob/master/src/main/java/com/github/jonathanxd/buildergenerator/annotation/PropertyInfo.java) documentation.
+Base classes are classes that provide getter methods for properties. This class must provide a `Builder` class that standardize builder methods. Builder methods (`with` methods) can also provide property options, see [PropertyInfo](https://github.com/JonathanxD/BuilderGenerator/blob/master/src/main/java/com/github/jonathanxd/buildergenerator/annotation/PropertyInfo.java) documentation or [Property specification](#Property specification) section.
 
 Example of valid base class:
 
@@ -136,7 +136,7 @@ final class MyFactory {
 
 ## Property specification
 
-BytecodeGenerator provide a way to add specify some property options like: validation, default values and nullability
+BytecodeGenerator provide a way to specify some property options like: value validator, default value provider and nullability.
 
 To specify options for a property you need to annotate the **base builder property method**.
 
