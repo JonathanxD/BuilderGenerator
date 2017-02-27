@@ -64,7 +64,7 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
 }
 
 task apOnlyJar(type: ShadowJar, dependsOn: classes) {
-    classifier = 'apt'
+    classifier = 'ap'
     from sourceSets.main.output
     configurations = [project.configurations.apOnly]
 }
