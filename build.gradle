@@ -1,3 +1,5 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
     id 'com.github.hierynomus.license' version '0.11.0'
     id 'com.github.johnrengelman.shadow' version '1.2.3'
@@ -26,10 +28,19 @@ repositories {
     maven { url "http://dl.bintray.com/kotlin/kotlin-eap-1.1" }
 }
 
+configurations {
+    apOnly
+
+    compile {
+        extendsFrom apOnly
+    }
+}
+
 dependencies {
     compile 'com.github.JonathanxD:CodeAPI-BytecodeWriter:3.1.6-3.1.4'
-    compile 'com.github.JonathanxD:CodeAPI-SourceWriter:3.1.6-3.1.6'
-    compile 'com.github.JonathanxD:JwIUtils:3.6.0'
+    apOnly 'com.github.JonathanxD:CodeAPI-SourceWriter:3.1.6-3.1.6'
+    apOnly 'com.github.JonathanxD:JwIUtils:3.6.0'
+
     testCompile "junit:junit:4.12"
 }
 
@@ -52,10 +63,17 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
     from javadoc.destinationDir
 }
 
+task apOnlyJar(type: ShadowJar, dependsOn: classes) {
+    classifier = 'apt'
+    from sourceSets.main.output
+    configurations = [project.configurations.apOnly]
+}
+
 artifacts {
     archives sourcesJar
     archives javadocJar
     archives shadowJar
+    archives apOnlyJar
 }
 
 license {
