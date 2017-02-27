@@ -24,7 +24,7 @@ BuilderGenerator is designed to generate Builders for immutable objects, base cl
 
 ## Base classes
 
-Base classes are classes that provide getter methods for properties. This class must provide a `Builder` class that standardize builder methods. Builder methods (`with` methods) can also provide property options, see [PropertyInfo](https://github.com/JonathanxD/BuilderGenerator/blob/master/src/main/java/com/github/jonathanxd/buildergenerator/annotation/PropertyInfo.java) documentation or [Property specification](#property-specification) section.
+Base classes are classes that provide getter methods for properties. This class must provide a `Builder` class that standardize builder methods. Builder methods (`with` methods) can also provide property options, see [@PropertyInfo](https://github.com/JonathanxD/BuilderGenerator/blob/master/src/main/java/com/github/jonathanxd/buildergenerator/annotation/PropertyInfo.java) documentation or [Property specification](#property-specification) section.
 
 Example of valid base class:
 
@@ -40,6 +40,7 @@ interface Person {
         Builder<T, B> withName(String name);
         Builder<T, B> withAge(int age);
         
+        // These methods are optional.
         String getName();
         String getAge();
     }
@@ -156,17 +157,18 @@ interface Person {
         @PropertyInfo(validator = @Validator(@MethodRef(value = Validators.class, name = "positiveInt")))
         Builder<T, B> withAge(int age);
         
+        // These methods are optional.
         String getName();
         String getAge();
     }
 }
 ```
 
-**By default, all properties are not Nullable.**
+**By default, properties value cannot be null.**
 
 ## Optional properties
 
-BuilderGenerator also supports Optional properties, all properties that the getter method in the base class returns an `Optional<T>` is marked as *optional property*.
+BuilderGenerator supports Optional properties. Only properties where the getter method in the base class returns a `Optional<T>` instance are marked as *optional property*.
 
 Example:
 ```java
@@ -194,6 +196,12 @@ interface Person {
     }
 }
 ```
+
+# Features
+
+- Method Reference Validation
+- `Builder` inner class validation
+- Default value provider and validator inlining (read [@Inline](https://github.com/JonathanxD/BuilderGenerator/blob/master/src/main/java/com/github/jonathanxd/buildergenerator/annotation/Inline.java) javadoc).
 
 # Notes
 
