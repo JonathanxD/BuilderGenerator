@@ -53,6 +53,11 @@ public final class PropertySpec {
     private final boolean isNullable;
 
     /**
+     * Is property optional.
+     */
+    private final boolean isOptional;
+
+    /**
      * Default value method provider.
      */
     private final MethodTypeSpec defaultValueSpec;
@@ -62,10 +67,11 @@ public final class PropertySpec {
      */
     private final MethodTypeSpec validatorSpec;
 
-    public PropertySpec(String name, CodeType type, boolean isNullable, MethodTypeSpec defaultValueSpec, MethodTypeSpec validatorSpec) {
+    public PropertySpec(String name, CodeType type, boolean isNullable, boolean isOptional, MethodTypeSpec defaultValueSpec, MethodTypeSpec validatorSpec) {
         this.name = name;
         this.type = type;
         this.isNullable = isNullable;
+        this.isOptional = isOptional;
         this.defaultValueSpec = defaultValueSpec;
         this.validatorSpec = validatorSpec;
     }
@@ -94,7 +100,7 @@ public final class PropertySpec {
      * @return True if the property is nullable (always true for {@link Optional} properties).
      */
     public boolean isNullable() {
-        return this.getType().getCanonicalName().equals(Optional.class.getCanonicalName()) || this.isNullable;
+        return this.isOptional() || this.isNullable;
     }
 
     /**
@@ -103,7 +109,7 @@ public final class PropertySpec {
      * @return True if the property is of type {@link Optional}.
      */
     public boolean isOptional() {
-        return this.getType().getCanonicalName().equals(Optional.class.getCanonicalName()) || this.isNullable;
+        return this.isOptional;
     }
 
     /**

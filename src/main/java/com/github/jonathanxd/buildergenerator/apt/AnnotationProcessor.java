@@ -35,6 +35,7 @@ import com.github.jonathanxd.buildergenerator.spec.BuilderSpec;
 import com.github.jonathanxd.buildergenerator.spec.PropertySpec;
 import com.github.jonathanxd.buildergenerator.util.AnnotatedConstructUtil;
 import com.github.jonathanxd.buildergenerator.util.AnnotationMirrorUtil;
+import com.github.jonathanxd.buildergenerator.util.ExecutableElementsUtil;
 import com.github.jonathanxd.buildergenerator.util.FilerUtil;
 import com.github.jonathanxd.buildergenerator.util.TypeElementUtil;
 import com.github.jonathanxd.buildergenerator.util.TypeResolver;
@@ -179,9 +180,9 @@ public class AnnotationProcessor extends AbstractProcessor {
                 if (isConstructor || element.getKind() == ElementKind.METHOD) {
                     ExecutableElement executableElement = (ExecutableElement) element;
 
-                    if (!isConstructor
-                            && !executableElement.getModifiers().contains(Modifier.PUBLIC)
-                            || !executableElement.getModifiers().contains(Modifier.STATIC)) {
+                    boolean isPublicStatic = !executableElement.getModifiers().contains(Modifier.PUBLIC) || !executableElement.getModifiers().contains(Modifier.STATIC);
+
+                    if (!isConstructor && !isPublicStatic) {
                         this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Factory method must be public and static.", element);
                         return false;
                     }
@@ -271,6 +272,8 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                     List<? extends VariableElement> parameters = executableElement.getParameters();
 
+                    List<String> propertyOrder = new ArrayList<>();
+
                     List<Pair<String, GenericType>> propertiesNameAndType = new ArrayList<>();
 
                     for (VariableElement parameter : parameters) {
@@ -279,15 +282,25 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                         GenericType parameterType = GenericTypeUtil.fromSourceString(s, new TypeResolver(processingEnvironment.getElementUtils()));
 
+                        propertyOrder.add(parameter.getSimpleName().toString());
+
                         propertiesNameAndType.add(Pair.of(parameter.getSimpleName().toString(), parameterType));
                     }
 
 
-                    TypeElement typeElement = processingEnvironment.getElementUtils().getTypeElement(baseType.getCanonicalName());
+                    TypeElement baseTypeElement = processingEnvironment.getElementUtils().getTypeElement(baseType.getCanonicalName());
 
                     TypeElement builder = null;
 
-                    for (Element enclosedElement : typeElement.getEnclosedElements()) {
+                    List<ExecutableElement> executables = new ArrayList<>();
+
+                    this.consumeMethods(baseTypeElement, e -> {
+                        if (executables.stream().noneMatch(elem -> elem.getSimpleName().toString().equals(e.getSimpleName().toString())))
+                            executables.add(e);
+                    });
+
+                    for (Element enclosedElement : baseTypeElement.getEnclosedElements()) {
+
                         if (enclosedElement instanceof TypeElement) {
                             TypeElement innerClass = (TypeElement) enclosedElement;
 
@@ -305,70 +318,79 @@ public class AnnotationProcessor extends AbstractProcessor {
                     }
 
                     if (builder == null) {
-                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Cannot find Builder class in base type '" + baseType + "'.", typeElement);
+                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Cannot find Builder class in base type '" + baseType + "'.", baseTypeElement);
                         return false;
                     }
 
                     CodeType builderType = TypeElementUtil.toCodeType(builder);
+
+                    List<ExecutableElement> builderMethods = new ArrayList<>();
+
+                    this.consumeMethods(builder, builderMethods::add);
+
                     List<PropertySpec> propertySpecs = new ArrayList<>();
 
-                    List<ExecutableElement> methods = new ArrayList<>();
+                    for (String s : propertyOrder) {
 
-                    this.consumeMethods(builder, methods::add);
+                        Optional<ExecutableElement> optional = ExecutableElementsUtil.get(executables, "get" + StringsKt.capitalize(s));
+                        Optional<ExecutableElement> builderMethod = ExecutableElementsUtil.get(builderMethods, "with" + StringsKt.capitalize(s));
 
-                    for (Pair<String, GenericType> nameTypePair : propertiesNameAndType) {
+                        if (!optional.isPresent()) {
+                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Missing getter 'get"+StringsKt.capitalize(s)+"' method of property '" + s + "'.", baseTypeElement);
+                            return false;
+                        }
+
+                        if (!builderMethod.isPresent()) {
+                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Missing Builder 'with" + StringsKt.capitalize(s) + "' method of property '" + s + "'.", builder);
+                            return false;
+                        }
+
+                        ExecutableElement getter = optional.get();
+                        ExecutableElement withMethod = builderMethod.get();
+
+                        GenericType propertyType = (GenericType) TypeElementUtil.toCodeType(getter.getReturnType(), this.processingEnvironment.getElementUtils());
+
+                        String simpleName = withMethod.getSimpleName().toString();
+                        List<? extends VariableElement> params = withMethod.getParameters();
+                        CodeType parameterType = TypeElementUtil.toCodeType(params.get(0).asType(), this.processingEnvironment.getElementUtils());
+                        CodeType returnType = TypeElementUtil.toCodeType(withMethod.getReturnType(), this.processingEnvironment.getElementUtils());
+
+                        CodeType type = propertyType;
 
                         boolean any = false;
+                        boolean isNullable = false;
+                        boolean isOptional = false;
 
-                        for (ExecutableElement method : methods) {
-                            String s = nameTypePair._1();
+                        if (type.getCanonicalName().equals("java.util.Optional") && !type.is(parameterType)) {
 
-                            String simpleName = method.getSimpleName().toString();
+                            GenericType.Bound[] bounds = propertyType.getBounds();
 
-                            String baseText = "with";
-
-                            if (simpleName.startsWith(baseText) && simpleName.length() > baseText.length()) {
-                                String name = StringsKt.decapitalize(simpleName.substring(baseText.length()));
-
-                                if (name.equals(s)) {
-                                    List<? extends VariableElement> params = method.getParameters();
-                                    CodeType parameterType = TypeElementUtil.toCodeType(params.get(0).asType(), this.processingEnvironment.getElementUtils());
-                                    CodeType returnType = TypeElementUtil.toCodeType(method.getReturnType(), this.processingEnvironment.getElementUtils());
-
-                                    GenericType genericType = nameTypePair._2();
-                                    CodeType type = genericType;
-
-                                    if (type.getCanonicalName().equals("java.util.Optional") && parameterType.is(type)) {
-
-                                        type = genericType.getBounds()[0].getType();
-
-                                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property setter method '" + simpleName + "' of property '" + s + "' must receive '" + type + "' instead of direct 'Optional' (" + genericType + ") type.", method);
-                                    } else {
-
-                                        if (params.size() != 1
-                                                || !parameterType.is(type)
-                                                || !returnType.getCanonicalName().equals(builderType.getCanonicalName())) {
-                                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property setter method '" + simpleName + "' of property '" + s + "' MUST have only one parameter of type '" + type + "' (current " + parameterType + ") and return type '" + builderType.getCanonicalName() + "' (current: " + returnType.getCanonicalName() + ").", method);
-                                        } else {
-
-
-                                            Optional<AnnotationMirror> mirror = AnnotatedConstructUtil.getAnnotationMirror(method, PROPERTY_INFO_ANNOTATION_CLASS);
-
-                                            if (mirror.isPresent()) {
-                                                propertySpecs.add(from(s, genericType, mirror.get()));
-                                                any = true;
-                                                break;
-                                            }
-                                        }
-                                    }
-
-                                }
+                            if (bounds.length > 0) {
+                                type = bounds[0].getType();
+                                isOptional = true;
                             }
                         }
 
-                        if (!any) {
-                            propertySpecs.add(new PropertySpec(nameTypePair._1(), nameTypePair._2(), false, null, null));
+                        if (params.size() != 1
+                                || !parameterType.is(type)
+                                || !returnType.getCanonicalName().equals(builderType.getCanonicalName())) {
+                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property setter method '" + simpleName + "' of property '" + s + "' MUST have only one parameter of type '" + type + "' (current " + parameterType + ") and return type '" + builderType.getCanonicalName() + "' (current: " + returnType.getCanonicalName() + ").", withMethod);
+                        } else {
+
+
+                            Optional<AnnotationMirror> mirror = AnnotatedConstructUtil.getAnnotationMirror(withMethod, PROPERTY_INFO_ANNOTATION_CLASS);
+
+                            if (mirror.isPresent()) {
+                                propertySpecs.add(from(s, type, mirror.get(), isNullable, isOptional));
+                                any = true;
+                            }
                         }
+
+
+                        if (!any) {
+                            propertySpecs.add(new PropertySpec(s, type, isNullable, isOptional, null, null));
+                        }
+
                     }
 
                     BuilderSpec builderSpec = new BuilderSpec(builderQualifiedName, factoryClass, factoryResultType, factoryMethodName, baseType, builderType, propertySpecs);
@@ -419,13 +441,12 @@ public class AnnotationProcessor extends AbstractProcessor {
         return false;
     }
 
-    private PropertySpec from(String name, CodeType type, AnnotationMirror annotationMirror) {
+    private PropertySpec from(String name, CodeType type, AnnotationMirror annotationMirror, boolean isNullable_, boolean isOptional) {
 
         AnnotationMirrorHelper annotationMirrorHelper = new AnnotationMirrorHelper(annotationMirror, processingEnvironment.getElementUtils());
 
 
-        boolean isNullable = type.getCanonicalName().equals("java.util.Optional")
-                || annotationMirrorHelper.<Boolean>get("isNullable").orElse(false);
+        boolean isNullable = annotationMirrorHelper.<Boolean>get("isNullable").orElse(isNullable_);
 
         MethodTypeSpec defaultValue = Conversions.CAPI.toMethodSpec(
                 annotationMirrorHelper.<Annotation>get("defaultValue").orElse(null),
@@ -439,7 +460,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                 new CodeType[]{Types.STRING}
         ).orElse(null);
 
-        return new PropertySpec(name, type, isNullable, defaultValue, validator);
+        return new PropertySpec(name, type, isNullable, isOptional, defaultValue, validator);
 
     }
 

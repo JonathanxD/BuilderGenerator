@@ -166,7 +166,11 @@ public final class CodeAPIBuilderGenerator {
             String name = propertySpec.getName();
             CodeType type = propertySpec.getType();
 
-            MethodInvocation getterInvoke = CodeAPI.invoke(InvokeType.get(baseType), baseType, base, "get" + StringsKt.capitalize(name), new TypeSpec(type, Collections.emptyList()), Collections.emptyList());
+            CodePart getterInvoke = CodeAPI.invoke(InvokeType.get(baseType), baseType, base, "get" + StringsKt.capitalize(name), new TypeSpec(type, Collections.emptyList()), Collections.emptyList());
+
+            if(propertySpec.isOptional()) {
+                getterInvoke = CodeAPI.invokeVirtual(Optional.class, getterInvoke, "orElse", CodeAPI.typeSpec(Object.class, Object.class), Collections.singletonList(Literals.NULL));
+            }
 
             body.add(CodeAPI.setThisField(type, name, getterInvoke));
         }
@@ -208,12 +212,19 @@ public final class CodeAPIBuilderGenerator {
             String name = propertySpec.getName();
             CodeType type = propertySpec.getType();
 
+            if (propertySpec.isOptional())
+                type = Generic.type(CodeAPI.getJavaType(Optional.class)).of(type);
+
             mutableCodeSource.add(
                     MethodDeclarationBuilder.builder()
                             .withModifiers(CodeModifier.PUBLIC)
                             .withReturnType(type)
                             .withName("get" + StringsKt.capitalize(name))
-                            .withBody(CodeAPI.source(CodeAPI.returnValue(type, CodeAPI.accessThisField(type, name))))
+                            .withBody(CodeAPI.source(
+                                    !propertySpec.isOptional()
+                                            ? CodeAPI.returnValue(type, CodeAPI.accessThisField(type, name))
+                                            : CodeAPI.returnValue(type, CodeAPI.invokeStatic(Optional.class, "ofNullable", CodeAPI.typeSpec(Optional.class, Object.class), Collections.singletonList(CodeAPI.accessThisField(type, name))))
+                            ))
                             .build()
             );
         }
@@ -285,6 +296,7 @@ public final class CodeAPIBuilderGenerator {
             if (invoker != null) {
                 return invoker.apply(new Object[]{new VariableRef(type, property.getName())});
             } else {
+
                 return MethodInvocationUtil.defaultValueToInvocation(defaultValueSpec.get(), property);
             }
         } else {
@@ -308,10 +320,6 @@ public final class CodeAPIBuilderGenerator {
 
                 throw new IllegalArgumentException("Illegal property type: '" + type + "'!");
             } else {
-
-                if (type.getCanonicalName().equals("java.util.Optional"))
-                    return CodeAPI.invokeStatic(Optional.class, "empty", CodeAPI.typeSpec(Optional.class), Collections.emptyList());
-
                 return Literals.NULL;
             }
 

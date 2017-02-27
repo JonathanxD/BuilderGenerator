@@ -60,7 +60,138 @@ interface BaseBuilder<T, B extends BaseBuilder<T, B>> {
 
 Implementation class is a concrete class that implements the base class.
 
-**TODO**
+Example:
+ 
+```java
+class PersonImpl implements Person {
+    private final String name;
+    private final int age;
+    
+    public PersonImpl(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+    
+    @Override
+    public String getName() {
+        return this.name;
+    }
+    
+    @Override
+    public int getAge() {
+        return this.age;
+    }
+    
+    @Override
+    public Builder<Person, ?> builder() {
+        throw new UnsupportedOperationException();
+    }
+}
+```
+
+## Generating builder class
+
+To generate Builder class you need to annotate the constructor of the implementation class OR annotate a static factory method.
+
+Annotated constructor example:
+```java
+class PersonImpl implements Person {
+    private final String name;
+    private final int age;
+    
+    @GenBuilder(base = Person.class)
+    public PersonImpl(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+    
+    @Override
+    public String getName() {
+        return this.name;
+    }
+    
+    @Override
+    public int getAge() {
+        return this.age;
+    }
+    
+    @Override
+    public Builder<Person, ?> builder() {
+        return new PersonBuilder(this);
+    }
+}
+```
+
+Factory method example:
+```java
+final class MyFactory {
+    @GenBuilder
+    public static Person personFactory(String name, int age) {
+        return new PersonImpl(name, age);
+    }
+}
+```
+
+## Property specification
+
+BytecodeGenerator provide a way to add specify some property options like: validation, default values and nullability
+
+To specify options for a property you need to annotate the **base builder property method**.
+
+Example:
+
+```java
+interface Person {
+    String getName();
+    int getAge();
+    
+    Builder<Person, ?> builder();
+    
+    interface Builder<T extends Person, B extends Builder<T, B>> extends com.myproject.BaseBuilder<T, B> {
+        
+        Builder<T, B> withName(String name);
+        
+        @PropertyInfo(validator = @Validator(@MethodRef(value = Validators.class, name = "positiveInt")))
+        Builder<T, B> withAge(int age);
+        
+        String getName();
+        String getAge();
+    }
+}
+```
+
+**By default, all properties are not Nullable.**
+
+## Optional properties
+
+BuilderGenerator also supports Optional properties, all properties that the getter method in the base class returns an `Optional<T>` is marked as *optional property*.
+
+Example:
+```java
+interface Person {
+    String getName();
+    int getAge();
+    Optional<LocalDate> getBirthDate();
+    
+    Builder<Person, ?> builder();
+    
+    interface Builder<T extends Person, B extends Builder<T, B>> extends com.myproject.BaseBuilder<T, B> {
+        
+        Builder<T, B> withName(String name);
+        
+        @PropertyInfo(validator = @Validator(@MethodRef(value = Validators.class, name = "positiveInt")))
+        Builder<T, B> withAge(int age);
+        
+        // Make sure to accept non-Optional type. If you use Optional<LocalData> BuilderGenerator will not mark the property as 'optional property'.
+        Builder<T, B> withBirthDate(LocalDate birthDate);
+        
+        // These methods are optional.
+        String getName();
+        String getAge();
+        Optional<LocalData> getBirthDate();
+    }
+}
+```
 
 # Notes
 
