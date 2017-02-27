@@ -46,7 +46,9 @@ interface Person {
 }
 ```
 
-A base `Builder` class is recommended to provide a `build()` method, BuilderGenerator provides a `Builder` class, but it is not recommended to extend this class.
+A base `Builder` class is recommended to provide a `build()` method. 
+
+**Note:** *BuilderGenerator* provides a `Builder` class, but is not recommended to extend this class (to avoid runtime-dependency on *BuilderGenerator*).
 
 Example of `BaseBuilder`:
 
