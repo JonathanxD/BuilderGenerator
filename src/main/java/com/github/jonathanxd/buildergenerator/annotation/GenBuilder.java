@@ -49,9 +49,22 @@ public @interface GenBuilder {
      *
      * See the builder style in javadoc.
      *
+     * If this annotation is present in a constructor, this property must be defined, if the
+     * annotation is present in a factory method, the return type will be used as base class.
+     *
      * @return Base class.
      */
-    Class<?> base();
+    Class<?> base() default Default.class;
+
+    /**
+     * Base implementation class.
+     *
+     * If the annotation is present in a constructor, the enclosing class will be used, if the
+     * annotation is present in a factory method, this property must be defined.
+     *
+     * @return Implementation class.
+     */
+    Class<?> factory() default Default.class;
 
     /**
      * Qualified name of the builder.

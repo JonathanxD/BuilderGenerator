@@ -195,14 +195,14 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                     String builderQualifiedName = null;
                     CodeType factoryClass = TypeElementUtil.toCodeType((TypeElement) enclosingElement);
-                    CodeType factoryResultType;
+                    CodeType factoryResultType = null;
                     CodeType baseType = null;
                     String factoryMethodName = null;
 
                     if (isConstructor) {
                         factoryResultType = factoryClass;
                     } else {
-                        factoryResultType = TypeElementUtil.toCodeType(executableElement.getReturnType(), processingEnvironment.getElementUtils());
+                        baseType = TypeElementUtil.toCodeType(executableElement.getReturnType(), processingEnvironment.getElementUtils());
                         factoryMethodName = executableElement.getSimpleName().toString();
                     }
 
@@ -225,6 +225,19 @@ public class AnnotationProcessor extends AbstractProcessor {
                                 }
 
                                 baseType = TypeElementUtil.toCodeType((DeclaredType) baseValue, processingEnvironment.getElementUtils());
+                            }
+
+                            if (entry.getKey().getSimpleName().contentEquals("factory")) {
+                                AnnotationValue value = entry.getValue();
+
+                                Object factoryValue = value.getValue();
+
+                                if (!(factoryValue instanceof DeclaredType)) {
+                                    this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Value '" + factoryValue + "' provided to 'factory' property of @GenBuilder annotation is not valid.", element, annotationMirror, value);
+                                    return false;
+                                }
+
+                                factoryResultType = TypeElementUtil.toCodeType((DeclaredType) factoryValue, processingEnvironment.getElementUtils());
                             }
 
                             if (entry.getKey().getSimpleName().contentEquals("qualifiedName")) {
@@ -253,13 +266,24 @@ public class AnnotationProcessor extends AbstractProcessor {
                         }
 
                         if (baseType == null) {
-                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Cannot determine base type.", element, annotationMirror);
+                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Base type must be defined in constructor methods.", element, annotationMirror);
                             return false;
                         }
+
+                        if(factoryResultType == null) {
+                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property 'factory' must be defined in factory methods.", element, annotationMirror);
+                            return false;
+                        }
+
                     }
 
                     if (baseType == null) {
                         this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Cannot determine base type.", element);
+                        return false;
+                    }
+
+                    if(factoryResultType == null) {
+                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Cannot determine factory result type.", element);
                         return false;
                     }
 
