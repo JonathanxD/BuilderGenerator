@@ -469,8 +469,6 @@ public class AnnotationProcessor extends AbstractProcessor {
                         }
 
                     }
-                    return true;
-
                 }
             } catch (Throwable t) {
                 this.getMessager().printMessage(Diagnostic.Kind.ERROR, "An error occurred '" + t.toString() + "'", element);
