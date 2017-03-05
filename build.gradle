@@ -6,7 +6,7 @@ plugins {
 }
 
 group 'com.github.jonathanxd'
-version '1.0.2'
+version '1.0.3'
 
 apply plugin: 'idea'
 apply plugin: 'java'
@@ -30,17 +30,23 @@ repositories {
 
 configurations {
     apOnly
-
-    compile {
-        extendsFrom apOnly
-    }
 }
 
+ext.bytecode_writer_version = '3.2.5-3.2.0-a'
+ext.source_writer_version = '3.2.0-3.2.0-a'
+ext.codeapi_version = '3.2.5'
+ext.jwiutils_version = '3.6.0'
+
 dependencies {
-    compile 'com.github.JonathanxD:CodeAPI-BytecodeWriter:3.2.5-3.2.0-a'
-    apOnly 'com.github.JonathanxD:CodeAPI-SourceWriter:3.2.0-3.2.0-a'
-    apOnly 'com.github.JonathanxD:CodeAPI:3.2.5'
-    apOnly 'com.github.JonathanxD:JwIUtils:3.6.0'
+    compile "com.github.JonathanxD:CodeAPI-BytecodeWriter:$bytecode_writer_version"
+    compile "com.github.JonathanxD:CodeAPI-SourceWriter:$source_writer_version"
+    compile "com.github.JonathanxD:CodeAPI:$codeapi_version"
+    compile "com.github.JonathanxD:JwIUtils:$jwiutils_version"
+
+    // Ap-only dependencies
+    apOnly "com.github.JonathanxD:CodeAPI-SourceWriter:$source_writer_version"
+    apOnly "com.github.JonathanxD:CodeAPI:$codeapi_version"
+    apOnly "com.github.JonathanxD:JwIUtils:$jwiutils_version"
 
     testCompile "junit:junit:4.12"
 }
