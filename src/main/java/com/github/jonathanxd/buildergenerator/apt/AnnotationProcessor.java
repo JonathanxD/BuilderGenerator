@@ -257,7 +257,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                         if (baseType == null) {
                             List<? extends TypeMirror> interfaces = ((TypeElement) enclosingElement).getInterfaces();
 
-                            if(interfaces.size() == 1) {
+                            if (interfaces.size() == 1) {
                                 baseType = TypeElementUtil.toCodeType(interfaces.get(0), processingEnvironment.getElementUtils());
                             } else {
                                 this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Base type cannot be inferred, please specify the base type!", element, annotationMirror);
@@ -342,7 +342,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                         Optional<ExecutableElement> builderMethod = ExecutableElementsUtil.get(builderMethods, "with" + StringsKt.capitalize(s));
 
                         if (!optional.isPresent()) {
-                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Missing getter 'get"+StringsKt.capitalize(s)+"' method of property '" + s + "'.", baseTypeElement);
+                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Missing getter 'get" + StringsKt.capitalize(s) + "' method of property '" + s + "'.", baseTypeElement);
                             return false;
                         }
 
@@ -377,9 +377,32 @@ public class AnnotationProcessor extends AbstractProcessor {
                             }
                         }
 
+
+                        String boundTypeName = null;
+
+                        if (baseType instanceof GenericType) {
+                            GenericType genericType = (GenericType) baseType;
+
+                            if (genericType.getBounds().length == 2) {
+                                GenericType.Bound bound = genericType.getBounds()[1];
+                                CodeType boundType = bound.getType();
+
+                                if (boundType instanceof GenericType) {
+                                    GenericType bound_ = (GenericType) boundType;
+
+                                    if (!bound_.isType() && bound_.getBounds().length == 1) {
+                                        if (bound_.getBounds()[0].getType().getCanonicalName().equals(builderType.getCanonicalName()))
+                                            boundTypeName = bound_.getName();
+                                    }
+                                }
+                            }
+
+                        }
+
                         if (params.size() != 1
                                 || !parameterType.is(type)
-                                || !returnType.getCanonicalName().equals(builderType.getCanonicalName())) {
+                                || !returnType.getCanonicalName().equals(builderType.getCanonicalName())
+                                || (boundTypeName != null && !boundTypeName.equals(builderType.getCanonicalName()))) {
                             this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property setter method '" + simpleName + "' of property '" + s + "' MUST have only one parameter of type '" + type + "' (current " + parameterType + ") and return type '" + builderType.getCanonicalName() + "' (current: " + returnType.getCanonicalName() + ").", withMethod);
                         } else {
 
@@ -392,8 +415,8 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                                 String name = from.getDefaultsPropertyName();
 
-                                if(!name.equals(s)) {
-                                    if(!propertyOrder.contains(name)) {
+                                if (!name.equals(s)) {
+                                    if (!propertyOrder.contains(name)) {
                                         this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Specified property name '" + name + "' cannot be found!.", withMethod, mirror.get());
                                         return false;
                                     }
