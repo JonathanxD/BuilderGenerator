@@ -6,7 +6,7 @@ plugins {
 }
 
 group 'com.github.jonathanxd'
-version '1.0.0'
+version '1.0.1'
 
 apply plugin: 'idea'
 apply plugin: 'java'
@@ -37,8 +37,9 @@ configurations {
 }
 
 dependencies {
-    compile 'com.github.JonathanxD:CodeAPI-BytecodeWriter:3.1.6-3.1.4'
-    apOnly 'com.github.JonathanxD:CodeAPI-SourceWriter:3.1.6-3.1.6'
+    compile 'com.github.JonathanxD:CodeAPI-BytecodeWriter:3.2.5-3.2.0-a'
+    apOnly 'com.github.JonathanxD:CodeAPI-SourceWriter:3.2.0-3.2.0-a'
+    apOnly 'com.github.JonathanxD:CodeAPI:3.2.5'
     apOnly 'com.github.JonathanxD:JwIUtils:3.6.0'
 
     testCompile "junit:junit:4.12"

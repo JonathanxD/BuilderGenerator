@@ -30,64 +30,67 @@ package com.github.jonathanxd.buildergenerator;
 import com.github.jonathanxd.buildergenerator.annotation.Inline;
 import com.github.jonathanxd.codeapi.CodeAPI;
 import com.github.jonathanxd.codeapi.CodePart;
-import com.github.jonathanxd.codeapi.base.Concat;
-import com.github.jonathanxd.codeapi.base.ThrowException;
 import com.github.jonathanxd.codeapi.base.VariableBase;
-import com.github.jonathanxd.codeapi.helper.ConcatHelper;
 import com.github.jonathanxd.codeapi.literal.Literals;
-import com.github.jonathanxd.codeapi.operator.Operators;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Default validators.
  *
- * All validators here are {@link Inline} to avoid dependency on {@code BytecodeGenerator}. This
- * means that you don't need to have {@code BytecodeGenerator} in class path even you reference
- * these methods from {@link com.github.jonathanxd.buildergenerator.annotation.MethodRef}.
+ * All {@code DefaultValues providers} here are {@link Inline} to avoid dependency on {@code
+ * BytecodeGenerator}. This means that you don't need to have {@code BytecodeGenerator} in class
+ * path even you reference these methods from {@link com.github.jonathanxd.buildergenerator.annotation.MethodRef}.
  */
-public final class Validators {
-    private Validators() {
+public final class DefaultValues {
+    private DefaultValues() {
 
     }
 
     /**
-     * Accept integer {@code i} only if the value is positive.
+     * Empty immutable list.
      *
-     * Java code:
-     * <pre>
-     * {@code
-     * if(i < 0)
-     *     throw new IllegalArgumentException("The input integer '"+i+"' for property
-     * '"+propertyName+"' must be positive.");
-     * }
-     * </pre>
-     *
-     * @param input        Input value.
-     * @param propertyInfo Property info.
+     * {@link Collections#emptyList}
      */
     @Inline
-    public static CodePart positiveInt(VariableBase propertyInfo, CodePart input) {
-
-        Concat message = ConcatHelper.builder("The input integer '")
-                .concat(input)
-                .concat("' for property '")
-                .concat(propertyInfo.getName())
-                .concat("' must be positive.")
-                .build();
-
-        ThrowException throwException = CodeAPI.throwException(
-                CodeAPI.invokeConstructor(CodeAPI.getJavaType(IllegalArgumentException.class), CodeAPI.constructorTypeSpec(String.class),
-                        Collections.singletonList(message)
-                )
-        );
-
-        return CodeAPI.ifStatement(CodeAPI.ifExprs(CodeAPI.check(input, Operators.LESS_THAN, Literals.INT(0))),
-                CodeAPI.source(
-                        throwException
-                ));
-
+    public static CodePart emptyList(VariableBase propertyInfo) {
+        return CodeAPI.invokeStatic(Collections.class, "emptyList", CodeAPI.typeSpec(List.class), Collections.emptyList());
     }
 
+    /**
+     * Empty immutable set.
+     *
+     * {@link Collections#emptySet}
+     */
+    @Inline
+    public static CodePart emptySet(VariableBase propertyInfo) {
+        return CodeAPI.invokeStatic(Collections.class, "emptySet", CodeAPI.typeSpec(Set.class), Collections.emptyList());
+    }
+
+    /**
+     * Empty array.
+     */
+    @Inline
+    public static CodePart emptyArray(VariableBase propertyInfo) {
+        int arrayDimension = propertyInfo.getVariableType().getArrayDimension();
+
+        CodePart[] dimensions = new CodePart[arrayDimension];
+
+        for (int i = 0; i < dimensions.length; i++) {
+            dimensions[i] = Literals.INT(0);
+        }
+
+        return CodeAPI.arrayConstruct(propertyInfo.getVariableType(), dimensions);
+    }
+
+    /**
+     * Calls the static {@code empty} method of variable type.
+     */
+    @Inline
+    public static CodePart empty(VariableBase propertyInfo) {
+        return CodeAPI.invokeStatic(propertyInfo.getVariableType(), "empty", CodeAPI.typeSpec(propertyInfo.getVariableType()), Collections.emptyList());
+    }
 
 }
