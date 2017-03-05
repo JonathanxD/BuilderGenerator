@@ -163,10 +163,11 @@ public final class CodeAPIBuilderGenerator {
         for (ExtendedProperty property : properties) {
 
             PropertySpec propertySpec = property.propertySpec;
+            String defaultsPropertyName = propertySpec.getDefaultsPropertyName();
             String name = propertySpec.getName();
             CodeType type = propertySpec.getType();
 
-            CodePart getterInvoke = CodeAPI.invoke(InvokeType.get(baseType), baseType, base, "get" + StringsKt.capitalize(name), new TypeSpec(type, Collections.emptyList()), Collections.emptyList());
+            CodePart getterInvoke = CodeAPI.invoke(InvokeType.get(baseType), baseType, base, "get" + StringsKt.capitalize(defaultsPropertyName), new TypeSpec(type, Collections.emptyList()), Collections.emptyList());
 
             if(propertySpec.isOptional()) {
                 getterInvoke = CodeAPI.invokeVirtual(Optional.class, getterInvoke, "orElse", CodeAPI.typeSpec(Object.class, Object.class), Collections.singletonList(Literals.NULL));

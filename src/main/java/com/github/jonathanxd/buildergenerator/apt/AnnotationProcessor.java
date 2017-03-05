@@ -255,8 +255,14 @@ public class AnnotationProcessor extends AbstractProcessor {
                         }
 
                         if (baseType == null) {
-                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Base type must be defined in constructor methods.", element, annotationMirror);
-                            return false;
+                            List<? extends TypeMirror> interfaces = ((TypeElement) enclosingElement).getInterfaces();
+
+                            if(interfaces.size() == 1) {
+                                baseType = TypeElementUtil.toCodeType(interfaces.get(0), processingEnvironment.getElementUtils());
+                            } else {
+                                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Base type cannot be inferred, please specify the base type!", element, annotationMirror);
+                                return false;
+                            }
                         }
 
                     }
@@ -381,14 +387,26 @@ public class AnnotationProcessor extends AbstractProcessor {
                             Optional<AnnotationMirror> mirror = AnnotatedConstructUtil.getAnnotationMirror(withMethod, PROPERTY_INFO_ANNOTATION_CLASS);
 
                             if (mirror.isPresent()) {
-                                propertySpecs.add(from(s, type, mirror.get(), isNullable, isOptional));
+
+                                PropertySpec from = from(s, type, mirror.get(), isNullable, isOptional);
+
+                                String name = from.getDefaultsPropertyName();
+
+                                if(!name.equals(s)) {
+                                    if(!propertyOrder.contains(name)) {
+                                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Specified property name '" + name + "' cannot be found!.", withMethod, mirror.get());
+                                        return false;
+                                    }
+                                }
+
+                                propertySpecs.add(from);
                                 any = true;
                             }
                         }
 
 
                         if (!any) {
-                            propertySpecs.add(new PropertySpec(s, type, isNullable, isOptional, null, null));
+                            propertySpecs.add(new PropertySpec(s, s, type, isNullable, isOptional, null, null));
                         }
 
                     }
@@ -448,6 +466,8 @@ public class AnnotationProcessor extends AbstractProcessor {
 
         boolean isNullable = annotationMirrorHelper.<Boolean>get("isNullable").orElse(isNullable_);
 
+        String defaultsPropertyName = annotationMirrorHelper.<String>get("defaultsPropertyName").orElse(name);
+
         MethodTypeSpec defaultValue = Conversions.CAPI.toMethodSpec(
                 annotationMirrorHelper.<Annotation>get("defaultValue").orElse(null),
                 type,
@@ -460,7 +480,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                 new CodeType[]{Types.STRING}
         ).orElse(null);
 
-        return new PropertySpec(name, type, isNullable, isOptional, defaultValue, validator);
+        return new PropertySpec(name, defaultsPropertyName, type, isNullable, isOptional, defaultValue, validator);
 
     }
 

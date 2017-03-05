@@ -27,6 +27,8 @@
  */
 package com.github.jonathanxd.buildergenerator.annotation;
 
+import com.github.jonathanxd.buildergenerator.spec.PropertySpec;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -50,6 +52,18 @@ public @interface PropertyInfo {
      * @return Is property nullable (can receive null values).
      */
     boolean isNullable() default false;
+
+    /**
+     * Name of property that should be used as default value.
+     *
+     * Name of the property where builder should extract the default value.
+     *
+     * {@code BuilderGenerator} generates a secondary constructor that extracts default values from
+     * instance, the default the property name is the {@link PropertySpec#getName()}.
+     *
+     * @return Name of property that should be used as default value.
+     */
+    String defaultsPropertyName() default "";
 
     /**
      * Default property value provider method.

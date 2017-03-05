@@ -43,6 +43,11 @@ public final class PropertySpec {
     private final String name;
 
     /**
+     * Name of property that should be used as default value.
+     */
+    private final String defaultsPropertyName;
+
+    /**
      * Property type.
      */
     private final CodeType type;
@@ -67,8 +72,9 @@ public final class PropertySpec {
      */
     private final MethodTypeSpec validatorSpec;
 
-    public PropertySpec(String name, CodeType type, boolean isNullable, boolean isOptional, MethodTypeSpec defaultValueSpec, MethodTypeSpec validatorSpec) {
+    public PropertySpec(String name, String defaultsPropertyName, CodeType type, boolean isNullable, boolean isOptional, MethodTypeSpec defaultValueSpec, MethodTypeSpec validatorSpec) {
         this.name = name;
+        this.defaultsPropertyName = defaultsPropertyName;
         this.type = type;
         this.isNullable = isNullable;
         this.isOptional = isOptional;
@@ -83,6 +89,15 @@ public final class PropertySpec {
      */
     public String getName() {
         return this.name;
+    }
+
+    /**
+     * Gets the name of property that should be used as default value.
+     *
+     * @return Name of property that should be used as default value.
+     */
+    public String getDefaultsPropertyName() {
+        return this.defaultsPropertyName;
     }
 
     /**
