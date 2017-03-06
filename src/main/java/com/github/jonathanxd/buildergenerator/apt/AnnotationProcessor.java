@@ -380,9 +380,10 @@ public class AnnotationProcessor extends AbstractProcessor {
 
 
                         String boundTypeName = null;
+                        CodeType bdType = TypeElementUtil.toCodeType0(builder);
 
-                        if (builderType instanceof GenericType) {
-                            GenericType genericType = (GenericType) builderType;
+                        if (bdType instanceof GenericType) {
+                            GenericType genericType = (GenericType) bdType;
 
                             if (genericType.getBounds().length == 2) {
                                 GenericType.Bound bound = genericType.getBounds()[1];
@@ -404,8 +405,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                                 || !parameterType.is(type)
                                 || !returnType.getCanonicalName().equals(builderType.getCanonicalName())
                                 || (boundTypeName != null && !boundTypeName.equals(builderType.getCanonicalName()))) {
-                            this.getMessager().printMessage(Diagnostic.Kind.OTHER, "Builder: '"+builderType+"' | "+builder.toString(), withMethod);
-                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property setter method '" + simpleName + "' of property '" + s + "' MUST have only one parameter of type '" + type + "' (current " + parameterType + ") and return type '" + builderType.getCanonicalName() + "' (current: " + returnType.getCanonicalName() + ""+(boundTypeName != null ? " | "+boundTypeName : "")+").", withMethod);
+                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property setter method '" + simpleName + "' of property '" + s + "' MUST have only one parameter of type '" + type + "' (current " + parameterType + ") and return type '" + builderType.getCanonicalName() + "' (current: " + returnType.getCanonicalName() + ""+(boundTypeName != null ? " | "+boundTypeName : "")+") (Builder: "+bdType+").", withMethod);
                             return false;
                         } else {
 
