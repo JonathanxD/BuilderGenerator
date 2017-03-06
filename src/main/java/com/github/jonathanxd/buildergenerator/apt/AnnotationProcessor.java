@@ -403,6 +403,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                                 || !parameterType.is(type)
                                 || !returnType.getCanonicalName().equals(builderType.getCanonicalName())
                                 || (boundTypeName != null && !boundTypeName.equals(builderType.getCanonicalName()))) {
+                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Builder: '"+builderType+"'", withMethod);
                             this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property setter method '" + simpleName + "' of property '" + s + "' MUST have only one parameter of type '" + type + "' (current " + parameterType + ") and return type '" + builderType.getCanonicalName() + "' (current: " + returnType.getCanonicalName() + ""+(boundTypeName != null ? " | "+boundTypeName : "")+").", withMethod);
                         } else {
 
