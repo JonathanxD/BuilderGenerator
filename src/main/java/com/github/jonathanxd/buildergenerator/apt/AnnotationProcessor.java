@@ -380,8 +380,8 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                         String boundTypeName = null;
 
-                        if (baseType instanceof GenericType) {
-                            GenericType genericType = (GenericType) baseType;
+                        if (builderType instanceof GenericType) {
+                            GenericType genericType = (GenericType) builderType;
 
                             if (genericType.getBounds().length == 2) {
                                 GenericType.Bound bound = genericType.getBounds()[1];
@@ -403,7 +403,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                                 || !parameterType.is(type)
                                 || !returnType.getCanonicalName().equals(builderType.getCanonicalName())
                                 || (boundTypeName != null && !boundTypeName.equals(builderType.getCanonicalName()))) {
-                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property setter method '" + simpleName + "' of property '" + s + "' MUST have only one parameter of type '" + type + "' (current " + parameterType + ") and return type '" + builderType.getCanonicalName() + "' (current: " + returnType.getCanonicalName() + ").", withMethod);
+                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property setter method '" + simpleName + "' of property '" + s + "' MUST have only one parameter of type '" + type + "' (current " + parameterType + ") and return type '" + builderType.getCanonicalName() + "' (current: " + returnType.getCanonicalName() + ""+(boundTypeName != null ? " | "+boundTypeName : "")+").", withMethod);
                         } else {
 
 
