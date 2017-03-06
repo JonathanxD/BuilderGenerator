@@ -76,6 +76,7 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
@@ -403,7 +404,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                                 || !parameterType.is(type)
                                 || !returnType.getCanonicalName().equals(builderType.getCanonicalName())
                                 || (boundTypeName != null && !boundTypeName.equals(builderType.getCanonicalName()))) {
-                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Builder: '"+builderType+"'", withMethod);
+                            this.getMessager().printMessage(Diagnostic.Kind.OTHER, "Builder: '"+builderType+"' | "+builder.toString(), withMethod);
                             this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property setter method '" + simpleName + "' of property '" + s + "' MUST have only one parameter of type '" + type + "' (current " + parameterType + ") and return type '" + builderType.getCanonicalName() + "' (current: " + returnType.getCanonicalName() + ""+(boundTypeName != null ? " | "+boundTypeName : "")+").", withMethod);
                             return false;
                         } else {
