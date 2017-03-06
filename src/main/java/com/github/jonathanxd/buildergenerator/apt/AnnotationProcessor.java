@@ -47,6 +47,7 @@ import com.github.jonathanxd.codeapi.keyword.Keyword;
 import com.github.jonathanxd.codeapi.keyword.Keywords;
 import com.github.jonathanxd.codeapi.type.CodeType;
 import com.github.jonathanxd.codeapi.type.GenericType;
+import com.github.jonathanxd.codeapi.type.PlainCodeType;
 import com.github.jonathanxd.codeapi.util.GenericTypeUtil;
 import com.github.jonathanxd.iutils.collection.CollectionUtils;
 import com.github.jonathanxd.iutils.object.Pair;
@@ -379,33 +380,12 @@ public class AnnotationProcessor extends AbstractProcessor {
                         }
 
 
-                        String boundTypeName = null;
-                        CodeType bdType = TypeElementUtil.toCodeType0(builder);
-
-                        if (bdType instanceof GenericType) {
-                            GenericType genericType = (GenericType) bdType;
-
-                            if (genericType.getBounds().length == 2) {
-                                GenericType.Bound bound = genericType.getBounds()[1];
-                                CodeType boundType = bound.getType();
-
-                                if (boundType instanceof GenericType) {
-                                    GenericType bound_ = (GenericType) boundType;
-
-                                    if (!bound_.isType() && bound_.getBounds().length == 1) {
-                                        if (bound_.getBounds()[0].getType().getCanonicalName().equals(builderType.getCanonicalName()))
-                                            boundTypeName = bound_.getName();
-                                    }
-                                }
-                            }
-
-                        }
+                        boolean isType = !(returnType instanceof PlainCodeType);
 
                         if (params.size() != 1
                                 || !parameterType.is(type)
-                                || !returnType.getCanonicalName().equals(builderType.getCanonicalName())
-                                || (boundTypeName != null && !boundTypeName.equals(builderType.getCanonicalName()))) {
-                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property setter method '" + simpleName + "' of property '" + s + "' MUST have only one parameter of type '" + type + "' (current " + parameterType + ") and return type '" + builderType.getCanonicalName() + "' (current: " + returnType.getCanonicalName() + ""+(boundTypeName != null ? " | "+boundTypeName : "")+") (Builder: "+bdType+").", withMethod);
+                                || isType && !returnType.getCanonicalName().equals(builderType.getCanonicalName())) {
+                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property setter method '" + simpleName + "' of property '" + s + "' MUST have only one parameter of type '" + type + "' (current " + parameterType + ") and return type '" + builderType.getCanonicalName() + "' (current: " + returnType.getCanonicalName() + ").", withMethod);
                             return false;
                         } else {
 
