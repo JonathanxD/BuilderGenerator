@@ -383,9 +383,10 @@ public class AnnotationProcessor extends AbstractProcessor {
                         boolean isType = !(returnType instanceof PlainCodeType);
 
                         if (params.size() != 1
-                                || !parameterType.is(type)
-                                || isType && !returnType.getCanonicalName().equals(builderType.getCanonicalName())) {
-                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property setter method '" + simpleName + "' of property '" + s + "' MUST have only one parameter of type '" + type + "' (current " + parameterType + ") and return type '" + builderType.getCanonicalName() + "' (current: " + returnType.getCanonicalName() + ").", withMethod);
+                                /*|| !parameterType.is(type)
+                                || isType && !returnType.getCanonicalName().equals(builderType.getCanonicalName())*/) {
+                            //this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property setter method '" + simpleName + "' of property '" + s + "' MUST have only one parameter of type '" + type + "' (current " + parameterType + ") and return type '" + builderType.getCanonicalName() + "' (current: " + returnType.getCanonicalName() + ").", withMethod);
+                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "One parameter type is required.", withMethod);
                             return false;
                         } else {
 
