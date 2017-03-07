@@ -175,7 +175,38 @@ public class AnnotationProcessor extends AbstractProcessor {
             }
         }
 
+        List<String> processedTypes = new ArrayList<>();
+
+        List<Element> genBuilderElements = new ArrayList<>();
+
         for (Element element : roundEnv.getElementsAnnotatedWith(GenBuilder.class)) {
+            if(element.getKind() == ElementKind.CONSTRUCTOR || element.getKind() == ElementKind.METHOD) {
+                genBuilderElements.add(element);
+            } else if(element.getKind() == ElementKind.CLASS) {
+                TypeElement typeElement = (TypeElement) element;
+                ExecutableElement moreArgs = null;
+
+                for (Element elem : typeElement.getEnclosedElements()) {
+                    if(elem instanceof ExecutableElement) {
+                        if(moreArgs == null || moreArgs.getParameters().size() < ((ExecutableElement) elem).getParameters().size())
+                            moreArgs = (ExecutableElement) elem;
+                    }
+                }
+
+                if(moreArgs == null) {
+                    this.getMessager().printMessage(Diagnostic.Kind.ERROR, "At least one constructor is required!", element);
+                    return false;
+                }
+
+                genBuilderElements.add(moreArgs);
+            } else {
+                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Invalid annotated element!", element);
+                return false;
+            }
+
+        }
+
+        for (Element element : genBuilderElements) {
             try {
                 boolean isConstructor = element.getKind() == ElementKind.CONSTRUCTOR;
 
@@ -275,7 +306,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                     }
 
                     if (builderQualifiedName == null) {
-                        builderQualifiedName = factoryResultType.getPackageName() + ".builder." + factoryResultType.getSimpleName() + "Builder";
+                        builderQualifiedName = factoryResultType.getPackageName() + ".builder." + baseType.getSimpleName() + "Builder";
                     }
 
                     List<? extends VariableElement> parameters = executableElement.getParameters();
@@ -435,21 +466,28 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                         String qualifiedName = declaration.getQualifiedName();
 
-                        try {
-                            JavaFileObject classFile = processingEnvironment.getFiler().createSourceFile(qualifiedName, element);
+                        if(processedTypes.contains(qualifiedName)) {
+                            this.getMessager().printMessage(Diagnostic.Kind.WARNING, "Already processed!", element);
+                        } else {
 
-                            OutputStream outputStream = classFile.openOutputStream();
+                            try {
+                                JavaFileObject classFile = processingEnvironment.getFiler().createSourceFile(qualifiedName, element);
 
-                            outputStream.write(pair._2().getBytes("UTF-8"));
+                                OutputStream outputStream = classFile.openOutputStream();
 
-                            outputStream.flush();
-                            outputStream.close();
-                        } catch (FilerException e) {
-                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to create source file of Builder class '" + qualifiedName + "' (file already exists?): " + e.getMessage(), element);
-                            throw new RuntimeException(e);
-                        } catch (IOException e) {
-                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to create source file of Builder class '" + qualifiedName + "': " + e.getMessage(), element);
-                            throw new RuntimeException(e);
+                                outputStream.write(pair._2().getBytes("UTF-8"));
+
+                                outputStream.flush();
+                                outputStream.close();
+
+                                processedTypes.add(qualifiedName);
+                            } catch (FilerException e) {
+                                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to create source file of Builder class '" + qualifiedName + "' (file already exists?): " + e.getMessage(), element);
+                                throw new RuntimeException(e);
+                            } catch (IOException e) {
+                                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to create source file of Builder class '" + qualifiedName + "': " + e.getMessage(), element);
+                                throw new RuntimeException(e);
+                            }
                         }
 
                     }

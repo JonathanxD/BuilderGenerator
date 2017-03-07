@@ -35,10 +35,13 @@ import java.lang.annotation.Target;
 /**
  * Generates a builder.
  *
- * Only constructors and static factory methods is valid.
+ * Only classes, constructors and static factory methods is valid.
+ *
+ * If a class is annotated, a constructor is required. (Constructor with more parameters will be
+ * used).
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.CONSTRUCTOR, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.CONSTRUCTOR, ElementType.METHOD})
 public @interface GenBuilder {
 
     /**
