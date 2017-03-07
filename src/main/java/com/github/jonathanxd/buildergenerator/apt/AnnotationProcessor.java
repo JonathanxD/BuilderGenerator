@@ -69,6 +69,7 @@ import javax.annotation.processing.FilerException;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.AnnotatedConstruct;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -177,11 +178,11 @@ public class AnnotationProcessor extends AbstractProcessor {
 
         List<String> processedTypes = new ArrayList<>();
 
-        List<Element> genBuilderElements = new ArrayList<>();
+        List<Pair<Element, Element>> genBuilderElements = new ArrayList<>();
 
         for (Element element : roundEnv.getElementsAnnotatedWith(GenBuilder.class)) {
             if(element.getKind() == ElementKind.CONSTRUCTOR || element.getKind() == ElementKind.METHOD) {
-                genBuilderElements.add(element);
+                genBuilderElements.add(Pair.of(element, element));
             } else if(element.getKind() == ElementKind.CLASS) {
                 TypeElement typeElement = (TypeElement) element;
                 ExecutableElement moreArgs = null;
@@ -198,7 +199,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                     return false;
                 }
 
-                genBuilderElements.add(moreArgs);
+                genBuilderElements.add(Pair.of(moreArgs, element));
             } else {
                 this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Invalid annotated element!", element);
                 return false;
@@ -206,8 +207,12 @@ public class AnnotationProcessor extends AbstractProcessor {
 
         }
 
-        for (Element element : genBuilderElements) {
+        for (Pair<Element, Element> basePair : genBuilderElements) {
+            Element element = basePair._1();
+            Element annotatedElement = basePair._2();
+
             try {
+
                 boolean isConstructor = element.getKind() == ElementKind.CONSTRUCTOR;
 
                 if (isConstructor || element.getKind() == ElementKind.METHOD) {
@@ -216,7 +221,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                     boolean isPublicStatic = !executableElement.getModifiers().contains(Modifier.PUBLIC) || !executableElement.getModifiers().contains(Modifier.STATIC);
 
                     if (!isConstructor && !isPublicStatic) {
-                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Factory method must be public and static.", element);
+                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Factory method must be public and static.", annotatedElement);
                         return false;
                     }
 
@@ -241,7 +246,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                         factoryMethodName = executableElement.getSimpleName().toString();
                     }
 
-                    Optional<AnnotationMirror> mirrorOptional = AnnotatedConstructUtil.getAnnotationMirror(element, BUILDER_GEN_ANNOTATION_CLASS);
+                    Optional<AnnotationMirror> mirrorOptional = AnnotatedConstructUtil.getAnnotationMirror(annotatedElement, BUILDER_GEN_ANNOTATION_CLASS);
 
                     if (mirrorOptional.isPresent()) {
                         AnnotationMirror annotationMirror = mirrorOptional.get();
@@ -255,7 +260,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                                 Object baseValue = value.getValue();
 
                                 if (!(baseValue instanceof DeclaredType)) {
-                                    this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Value '" + baseValue + "' provided to 'base' property of @GenBuilder annotation is not valid.", element, annotationMirror, value);
+                                    this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Value '" + baseValue + "' provided to 'base' property of @GenBuilder annotation is not valid.", annotatedElement, annotationMirror, value);
                                     return false;
                                 }
 
@@ -278,7 +283,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                                 }
 
                                 if (value.equals("null") || value.equals("true") || value.equals("false") || isKeyword || !FQ_REGEX.matcher(value).matches()) {
-                                    this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Invalid class name '" + value + "', the class name MUST match the java class naming rules (Java Language Specification, Section 3.8. Identifiers).", element, annotationMirror, entry.getValue());
+                                    this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Invalid class name '" + value + "', the class name MUST match the java class naming rules (Java Language Specification, Section 3.8. Identifiers).", annotatedElement, annotationMirror, entry.getValue());
                                     return false;
                                 }
 
@@ -293,7 +298,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                             if (interfaces.size() == 1) {
                                 baseType = TypeElementUtil.toCodeType(interfaces.get(0), processingEnvironment.getElementUtils());
                             } else {
-                                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Base type cannot be inferred, please specify the base type!", element, annotationMirror);
+                                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Base type cannot be inferred, please specify the base type!", annotatedElement, annotationMirror);
                                 return false;
                             }
                         }
@@ -301,7 +306,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                     }
 
                     if (baseType == null) {
-                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Cannot determine base type.", element);
+                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Cannot determine base type.", annotatedElement);
                         return false;
                     }
 
@@ -313,17 +318,11 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                     List<String> propertyOrder = new ArrayList<>();
 
-                    List<Pair<String, GenericType>> propertiesNameAndType = new ArrayList<>();
-
                     for (VariableElement parameter : parameters) {
                         TypeMirror typeMirror = parameter.asType();
                         String s = typeMirror.toString();
 
-                        GenericType parameterType = GenericTypeUtil.fromSourceString(s, new TypeResolver(processingEnvironment.getElementUtils()));
-
                         propertyOrder.add(parameter.getSimpleName().toString());
-
-                        propertiesNameAndType.add(Pair.of(parameter.getSimpleName().toString(), parameterType));
                     }
 
 
@@ -467,11 +466,19 @@ public class AnnotationProcessor extends AbstractProcessor {
                         String qualifiedName = declaration.getQualifiedName();
 
                         if(processedTypes.contains(qualifiedName)) {
-                            this.getMessager().printMessage(Diagnostic.Kind.WARNING, "Already processed!", element);
+                            this.getMessager().printMessage(Diagnostic.Kind.WARNING, "Already processed!", annotatedElement);
                         } else {
 
                             try {
-                                JavaFileObject classFile = processingEnvironment.getFiler().createSourceFile(qualifiedName, element);
+                                Element[] origin;
+
+                                if(element == annotatedElement) {
+                                    origin = new Element[] { element };
+                                } else {
+                                    origin = new Element[] { annotatedElement, element };
+                                }
+
+                                JavaFileObject classFile = processingEnvironment.getFiler().createSourceFile(qualifiedName, origin);
 
                                 OutputStream outputStream = classFile.openOutputStream();
 
@@ -482,10 +489,10 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                                 processedTypes.add(qualifiedName);
                             } catch (FilerException e) {
-                                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to create source file of Builder class '" + qualifiedName + "' (file already exists?): " + e.getMessage(), element);
+                                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to create source file of Builder class '" + qualifiedName + "' (file already exists?): " + e.getMessage(), annotatedElement);
                                 throw new RuntimeException(e);
                             } catch (IOException e) {
-                                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to create source file of Builder class '" + qualifiedName + "': " + e.getMessage(), element);
+                                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to create source file of Builder class '" + qualifiedName + "': " + e.getMessage(), annotatedElement);
                                 throw new RuntimeException(e);
                             }
                         }
@@ -493,7 +500,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                     }
                 }
             } catch (Throwable t) {
-                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "An error occurred '" + t.toString() + "'", element);
+                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "An error occurred '" + t.toString() + "'", annotatedElement);
                 t.printStackTrace(new MessagerPrint(this.getMessager()));
                 return false;
             }
