@@ -25,51 +25,35 @@
  *      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *      THE SOFTWARE.
  */
-package com.github.jonathanxd.buildergenerator.util;
+package com.github.jonathanxd.buildergenerator.apt;
 
-import com.github.jonathanxd.codeapi.CodeAPI;
-import com.github.jonathanxd.codeapi.type.CodeType;
-import com.github.jonathanxd.codeapi.type.PlainCodeType;
-import com.github.jonathanxd.codeapi.util.CodeTypes;
-import com.github.jonathanxd.codeapi.util.GenericTypeUtil;
-import com.github.jonathanxd.iutils.type.TypeInfo;
+import java.util.Map;
 
-import java.util.function.Function;
+public final class Options {
 
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.util.Elements;
+    private static final String PATH = "jonathanxd.buildergenerator";
 
-/**
- * Type resolver, resolves class literal.
- *
- * @see TypeInfo#resolveClass(String)
- */
-public final class TypeResolver implements Function<String, CodeType> {
+    /**
+     * Disables the strict verification of builder setter methods ({@code with} methods).
+     *
+     * Annotation processor will continue verifying parameter number in setter methods.
+     */
+    private static boolean DISABLE_STRICT_SETTER_CHECK;
 
-    private final Elements elements;
-
-    public TypeResolver(Elements elements) {
-        this.elements = elements;
+    private Options() {
     }
 
-    @Override
-    public CodeType apply(String s) {
-        try {
-            return CodeAPI.getJavaType(TypeInfo.resolveClass(s));
-        } catch (Exception e) {
-            if (elements != null) {
-                TypeElement typeElement = elements.getTypeElement(s);
+    /**
+     * @see #DISABLE_STRICT_SETTER_CHECK
+     */
+    public static boolean isDisableStrictSetterCheck() {
+        return Options.DISABLE_STRICT_SETTER_CHECK;
+    }
 
-                if (typeElement != null) {
-                    if (typeElement.getKind() == ElementKind.INTERFACE) {
-                        return new PlainCodeType(s, true);
-                    }
-                }
-            }
 
-            return new PlainCodeType(s, false);
-        }
+    public static void load(Map<String, String> options) {
+        Options.DISABLE_STRICT_SETTER_CHECK =
+                Boolean.valueOf(options.getOrDefault(PATH + ".disableStrictSetterCheck", "false"));
     }
 
 }

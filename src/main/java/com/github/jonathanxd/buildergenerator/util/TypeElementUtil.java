@@ -71,22 +71,6 @@ public class TypeElementUtil {
     }
 
     /**
-     * Convert {@link TypeElement} to {@link CodeType}.
-     *
-     * @param typeElement Type element.
-     * @return {@link CodeType} corresponding to {@link TypeElement}.
-     */
-    public static CodeType toCodeType0(TypeElement typeElement) {
-        return GenericTypeUtil.fromSourceString(typeElement.toString(), s -> {
-            try {
-                return CodeAPI.getJavaType(TypeInfo.resolveClass(s));
-            } catch (Exception e) {
-                return new PlainCodeType(s, typeElement.getKind() == ElementKind.INTERFACE);
-            }
-        });
-    }
-
-    /**
      * Convert {@link TypeMirror} to {@link TypeElement}.
      *
      * @param typeMirror Type mirror.

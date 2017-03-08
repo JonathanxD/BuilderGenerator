@@ -38,7 +38,6 @@ import com.github.jonathanxd.buildergenerator.util.AnnotationMirrorUtil;
 import com.github.jonathanxd.buildergenerator.util.ExecutableElementsUtil;
 import com.github.jonathanxd.buildergenerator.util.FilerUtil;
 import com.github.jonathanxd.buildergenerator.util.TypeElementUtil;
-import com.github.jonathanxd.buildergenerator.util.TypeResolver;
 import com.github.jonathanxd.codeapi.Types;
 import com.github.jonathanxd.codeapi.base.Annotation;
 import com.github.jonathanxd.codeapi.base.TypeDeclaration;
@@ -47,8 +46,7 @@ import com.github.jonathanxd.codeapi.keyword.Keyword;
 import com.github.jonathanxd.codeapi.keyword.Keywords;
 import com.github.jonathanxd.codeapi.type.CodeType;
 import com.github.jonathanxd.codeapi.type.GenericType;
-import com.github.jonathanxd.codeapi.type.PlainCodeType;
-import com.github.jonathanxd.codeapi.util.GenericTypeUtil;
+import com.github.jonathanxd.codeapi.util.ModelCodeTypesKt;
 import com.github.jonathanxd.iutils.collection.CollectionUtils;
 import com.github.jonathanxd.iutils.object.Pair;
 
@@ -69,7 +67,6 @@ import javax.annotation.processing.FilerException;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
-import javax.lang.model.AnnotatedConstruct;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -78,7 +75,6 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
@@ -96,6 +92,11 @@ public class AnnotationProcessor extends AbstractProcessor {
     private static final String INLINE_ANNOTATION_CLASS = "com.github.jonathanxd.buildergenerator.annotation.Inline";
     private static final Pattern FQ_REGEX = Pattern.compile("([\\p{L}_$][\\p{L}\\p{N}_$]*\\.)*[\\p{L}_$][\\p{L}\\p{N}_$]*");
 
+    /**
+     * Disables
+     */
+    private static final boolean disableStrictCheck = false;
+
     private boolean generateSource = true;
     private ProcessingEnvironment processingEnvironment;
     private Messager messager;
@@ -104,6 +105,7 @@ public class AnnotationProcessor extends AbstractProcessor {
     public synchronized void init(ProcessingEnvironment processingEnv) {
         this.processingEnvironment = processingEnv;
         this.messager = new BuilderGeneratorMessager(this.processingEnvironment.getMessager());
+        Options.load(this.processingEnvironment.getOptions());
     }
 
     @Override
@@ -181,20 +183,20 @@ public class AnnotationProcessor extends AbstractProcessor {
         List<Pair<Element, Element>> genBuilderElements = new ArrayList<>();
 
         for (Element element : roundEnv.getElementsAnnotatedWith(GenBuilder.class)) {
-            if(element.getKind() == ElementKind.CONSTRUCTOR || element.getKind() == ElementKind.METHOD) {
+            if (element.getKind() == ElementKind.CONSTRUCTOR || element.getKind() == ElementKind.METHOD) {
                 genBuilderElements.add(Pair.of(element, element));
-            } else if(element.getKind() == ElementKind.CLASS) {
+            } else if (element.getKind() == ElementKind.CLASS) {
                 TypeElement typeElement = (TypeElement) element;
                 ExecutableElement moreArgs = null;
 
                 for (Element elem : typeElement.getEnclosedElements()) {
-                    if(elem instanceof ExecutableElement) {
-                        if(moreArgs == null || moreArgs.getParameters().size() < ((ExecutableElement) elem).getParameters().size())
+                    if (elem instanceof ExecutableElement) {
+                        if (moreArgs == null || moreArgs.getParameters().size() < ((ExecutableElement) elem).getParameters().size())
                             moreArgs = (ExecutableElement) elem;
                     }
                 }
 
-                if(moreArgs == null) {
+                if (moreArgs == null) {
                     this.getMessager().printMessage(Diagnostic.Kind.ERROR, "At least one constructor is required!", element);
                     return false;
                 }
@@ -368,6 +370,29 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                     List<PropertySpec> propertySpecs = new ArrayList<>();
 
+                    String boundTypeName = null;
+
+                    CodeType bdType = ModelCodeTypesKt.getCodeTypeFromTypeParameters(builder);
+
+                    if (bdType instanceof GenericType) {
+                        GenericType genericType = (GenericType) bdType;
+
+                        if (genericType.getBounds().length == 2) {
+                            GenericType.Bound bound = genericType.getBounds()[1];
+                            CodeType boundType = bound.getType();
+
+                            if (boundType instanceof GenericType) {
+                                GenericType bound_ = (GenericType) boundType;
+
+                                if (!bound_.isType() && bound_.getBounds().length == 1) {
+                                    if (bound_.getBounds()[0].getType().getCanonicalName().equals(builderType.getCanonicalName()))
+                                        boundTypeName = bound_.getName();
+                                }
+                            }
+                        }
+
+                    }
+
                     for (String s : propertyOrder) {
 
                         Optional<ExecutableElement> optional = ExecutableElementsUtil.get(executables, "get" + StringsKt.capitalize(s));
@@ -409,14 +434,32 @@ public class AnnotationProcessor extends AbstractProcessor {
                             }
                         }
 
+                        boolean isValid = params.size() == 1;
 
-                        boolean isType = !(returnType instanceof PlainCodeType);
+                        if (!Options.isDisableStrictSetterCheck()) {
+                            if (!parameterType.is(type)
+                                    || (boundTypeName == null && !returnType.getCanonicalName().equals(builderType.getCanonicalName()))
+                                    || (boundTypeName != null && !returnType.getCanonicalName().equals(boundTypeName))) {
+                                isValid = false;
+                            }
+                        }
 
-                        if (params.size() != 1
-                                /*|| !parameterType.is(type)
-                                || isType && !returnType.getCanonicalName().equals(builderType.getCanonicalName())*/) {
-                            //this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Property setter method '" + simpleName + "' of property '" + s + "' MUST have only one parameter of type '" + type + "' (current " + parameterType + ") and return type '" + builderType.getCanonicalName() + "' (current: " + returnType.getCanonicalName() + ").", withMethod);
-                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "One parameter type is required.", withMethod);
+                        if (!isValid) {
+                            this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                    "Property setter method '"
+                                            + simpleName
+                                            + "' of property '"
+                                            + s
+                                            + "' must have only one parameter of type '"
+                                            + type
+                                            + "' (current "
+                                            + parameterType
+                                            + ") and return type '"
+                                            + builderType.getCanonicalName()
+                                            + (boundTypeName != null ? " (or " + boundTypeName + ")" : "")
+                                            + "' (current: "
+                                            + returnType.getCanonicalName()
+                                            + ").", withMethod);
                             return false;
                         } else {
 
@@ -465,17 +508,17 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                         String qualifiedName = declaration.getQualifiedName();
 
-                        if(processedTypes.contains(qualifiedName)) {
+                        if (processedTypes.contains(qualifiedName)) {
                             this.getMessager().printMessage(Diagnostic.Kind.WARNING, "Already processed!", annotatedElement);
                         } else {
 
                             try {
                                 Element[] origin;
 
-                                if(element == annotatedElement) {
-                                    origin = new Element[] { element };
+                                if (element == annotatedElement) {
+                                    origin = new Element[]{element};
                                 } else {
-                                    origin = new Element[] { annotatedElement, element };
+                                    origin = new Element[]{annotatedElement, element};
                                 }
 
                                 JavaFileObject classFile = processingEnvironment.getFiler().createSourceFile(qualifiedName, origin);
@@ -547,7 +590,7 @@ public class AnnotationProcessor extends AbstractProcessor {
             TypeElement element = TypeElementUtil.toTypeElement(superclass, processingEnvironment.getElementUtils());
 
             if (element == null) {
-                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Cannot find super class '" + superclass.toString() + "'", typeElement);
+                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Cannot find super class '" + superclass.toString() + "'!", typeElement);
                 return;
             }
 
@@ -560,7 +603,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                 TypeElement element = TypeElementUtil.toTypeElement(itf, processingEnvironment.getElementUtils());
 
                 if (element == null) {
-                    this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Cannot find interface '" + itf.toString() + "'", typeElement);
+                    this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Cannot find interface '" + itf.toString() + "'!", typeElement);
                     return;
                 }
 
