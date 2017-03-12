@@ -587,6 +587,8 @@ public class AnnotationProcessor extends AbstractProcessor {
 
         TypeMirror superclass = typeElement.getSuperclass();
 
+        List<Runnable> later = new ArrayList<>();
+
         if (superclass.getKind() != TypeKind.NONE && !superclass.toString().equals("java.lang.Object")) {
             TypeElement element = TypeElementUtil.toTypeElement(superclass, processingEnvironment.getElementUtils());
 
@@ -595,7 +597,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                 return;
             }
 
-            consumeMethods(processingEnvironment.getElementUtils().getTypeElement(superclass.toString()), consumer);
+            later.add(() -> consumeMethods(processingEnvironment.getElementUtils().getTypeElement(superclass.toString()), consumer));
         }
 
         for (TypeMirror itf : typeElement.getInterfaces()) {
@@ -608,9 +610,11 @@ public class AnnotationProcessor extends AbstractProcessor {
                     return;
                 }
 
-                consumeMethods(element, consumer);
+                later.add(() -> consumeMethods(element, consumer));
             }
         }
+
+        later.forEach(Runnable::run);
     }
 
     @Override
