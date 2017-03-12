@@ -46,6 +46,7 @@ import com.github.jonathanxd.codeapi.keyword.Keyword;
 import com.github.jonathanxd.codeapi.keyword.Keywords;
 import com.github.jonathanxd.codeapi.type.CodeType;
 import com.github.jonathanxd.codeapi.type.GenericType;
+import com.github.jonathanxd.codeapi.util.Identity;
 import com.github.jonathanxd.codeapi.util.ModelCodeTypesKt;
 import com.github.jonathanxd.iutils.collection.CollectionUtils;
 import com.github.jonathanxd.iutils.object.Pair;
@@ -437,8 +438,8 @@ public class AnnotationProcessor extends AbstractProcessor {
                         boolean isValid = params.size() == 1;
 
                         if (!Options.isDisableStrictSetterCheck()) {
-                            if (!parameterType.is(type)
-                                    || (boundTypeName == null && !returnType.getCanonicalName().equals(builderType.getCanonicalName()))
+                            if (!Identity.nonStrictEq(parameterType, type)
+                                    || (boundTypeName == null && !Identity.nonStrictEq(returnType, builderType))
                                     || (boundTypeName != null && !returnType.getCanonicalName().equals(boundTypeName))) {
                                 isValid = false;
                             }
@@ -455,10 +456,10 @@ public class AnnotationProcessor extends AbstractProcessor {
                                             + "' (current "
                                             + parameterType
                                             + ") and return type '"
-                                            + builderType.getCanonicalName()
+                                            + builderType
                                             + (boundTypeName != null ? " (or " + boundTypeName + ")" : "")
                                             + "' (current: "
-                                            + returnType.getCanonicalName()
+                                            + returnType
                                             + ").", withMethod);
                             return false;
                         } else {
