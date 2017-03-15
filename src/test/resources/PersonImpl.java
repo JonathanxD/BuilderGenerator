@@ -25,50 +25,28 @@
  *      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *      THE SOFTWARE.
  */
-package com.github.jonathanxd.buildergenerator.util;
+package com;
 
-import com.github.jonathanxd.codeapi.CodeAPI;
-import com.github.jonathanxd.codeapi.type.CodeType;
-import com.github.jonathanxd.codeapi.type.PlainCodeType;
-import com.github.jonathanxd.codeapi.util.CodeTypes;
-import com.github.jonathanxd.codeapi.util.GenericTypeUtil;
-import com.github.jonathanxd.codeapi.util.TypeElementCodeType;
-import com.github.jonathanxd.iutils.type.TypeInfo;
+import com.github.jonathanxd.buildergenerator.annotation.GenBuilder;
 
-import java.util.function.Function;
+@GenBuilder
+public class PersonImpl implements Person {
+    private final String name;
+    private final int age;
 
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.util.Elements;
-
-/**
- * Type resolver, resolves class literal.
- *
- * @see TypeInfo#resolveClass(String)
- */
-public final class TypeResolver implements Function<String, CodeType> {
-
-    private final Elements elements;
-
-    public TypeResolver(Elements elements) {
-        this.elements = elements;
+    public PersonImpl(String name, int age) {
+        this.name = name;
+        this.age = age;
     }
 
     @Override
-    public CodeType apply(String s) {
-        try {
-            return CodeAPI.getJavaType(TypeInfo.resolveClass(s));
-        } catch (Exception e) {
-            if (elements != null) {
-                TypeElement typeElement = elements.getTypeElement(s);
-
-                if (typeElement != null) {
-                    return new TypeElementCodeType(typeElement);
-                }
-            }
-
-            return new PlainCodeType(s, false);
-        }
+    public String getName() {
+        return this.name;
     }
 
+    @Override
+    public int getAge() {
+        return this.age;
+
+    }
 }

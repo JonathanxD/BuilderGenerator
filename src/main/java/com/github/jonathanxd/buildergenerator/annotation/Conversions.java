@@ -32,7 +32,6 @@ import com.github.jonathanxd.codeapi.Types;
 import com.github.jonathanxd.codeapi.base.Annotation;
 import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
 import com.github.jonathanxd.codeapi.common.TypeSpec;
-import com.github.jonathanxd.codeapi.literal.Literals;
 import com.github.jonathanxd.codeapi.type.CodeType;
 import com.github.jonathanxd.iutils.condition.Conditions;
 
@@ -130,6 +129,22 @@ public final class Conversions {
     }
 
     /**
+     * Convert {@link DefaultImpl} instance to {@link MethodTypeSpec}.
+     *
+     * @param defaultImpl DefaultImpl instance to convert to {@link MethodTypeSpec}.
+     * @param rtype     Inferred return type.
+     * @param ptypes    Inferred parameter types.
+     * @return {@link Optional} of {@link MethodTypeSpec} instance, or an empty {@link Optional} if the {@link DefaultImpl#value()}
+     * is {@link Default#isDefault(MethodRef)}.
+     */
+    public static Optional<MethodTypeSpec> toMethodSpec(DefaultImpl defaultImpl, Class<?> rtype, Class<?>[] ptypes) {
+        if (defaultImpl == null || Default.isDefault(defaultImpl.value()))
+            return Optional.empty();
+
+        return Conversions.toMethodSpec(defaultImpl.value(), rtype, ptypes);
+    }
+
+    /**
      * If the {@code type} is {@link Default} returns {@code alternative}, if not returns {@code
      * type}.
      *
@@ -146,7 +161,6 @@ public final class Conversions {
      * CodeAPI version of methods.
      */
     public static class CAPI {
-
 
         /**
          * Convert {@link Validator} {@link Annotation} instance to {@link MethodTypeSpec}.
@@ -241,6 +255,25 @@ public final class Conversions {
                                     : CollectionsKt.mapIndexed(parameterTypes, (integer, aClass) -> typeOr(aClass, ptypes[integer]))
                     )
             ));
+        }
+
+        /**
+         * This method is identical to {@link #toMethodSpec(DefaultImpl, Class, Class[])} but this
+         * method reads values from {@link Annotation CodeAPI Annotation}.
+         *
+         * @param rtype  Inferred return type.
+         * @param ptypes Inferred parameter types.
+         * @return {@link Optional} of {@link MethodTypeSpec} instance, or an empty {@link Optional} if the {@link
+         * DefaultImpl#value()} is {@link Default#isDefault(MethodRef)}.
+         * @see #toMethodSpec(DefaultImpl, Class, Class[])
+         */
+        @SuppressWarnings("unchecked")
+        public static Optional<MethodTypeSpec> defaultImplToMethodSpec(Annotation defaultImpl, CodeType rtype, CodeType[] ptypes) {
+
+            if (defaultImpl == null || Default.isDefaultDefaultImpl(defaultImpl))
+                return Optional.empty();
+
+            return Conversions.CAPI.toMethodSpec((Annotation) defaultImpl.getValues().get("value"), rtype, ptypes);
         }
 
         /**

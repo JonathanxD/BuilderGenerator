@@ -25,50 +25,53 @@
  *      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *      THE SOFTWARE.
  */
-package com.github.jonathanxd.buildergenerator.util;
+package com.github.jonathanxd.buildergenerator.spec;
 
-import com.github.jonathanxd.codeapi.CodeAPI;
-import com.github.jonathanxd.codeapi.type.CodeType;
-import com.github.jonathanxd.codeapi.type.PlainCodeType;
-import com.github.jonathanxd.codeapi.util.CodeTypes;
-import com.github.jonathanxd.codeapi.util.GenericTypeUtil;
-import com.github.jonathanxd.codeapi.util.TypeElementCodeType;
-import com.github.jonathanxd.iutils.type.TypeInfo;
+import com.github.jonathanxd.codeapi.base.MethodDeclaration;
+import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
 
-import java.util.function.Function;
-
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.util.Elements;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
- * Type resolver, resolves class literal.
- *
- * @see TypeInfo#resolveClass(String)
+ * Method specification.
  */
-public final class TypeResolver implements Function<String, CodeType> {
+public class MethodSpec {
 
-    private final Elements elements;
+    /**
+     * Target method to apply specification.
+     */
+    private final MethodDeclaration targetMethod;
 
-    public TypeResolver(Elements elements) {
-        this.elements = elements;
+    /**
+     * Default method specification.
+     *
+     * @see com.github.jonathanxd.buildergenerator.annotation.DefaultImpl
+     */
+    private final MethodTypeSpec defaultMethod;
+
+    public MethodSpec(MethodDeclaration targetMethod, MethodTypeSpec defaultMethod) {
+        Objects.requireNonNull(targetMethod);
+        this.targetMethod = targetMethod;
+        this.defaultMethod = defaultMethod;
     }
 
-    @Override
-    public CodeType apply(String s) {
-        try {
-            return CodeAPI.getJavaType(TypeInfo.resolveClass(s));
-        } catch (Exception e) {
-            if (elements != null) {
-                TypeElement typeElement = elements.getTypeElement(s);
-
-                if (typeElement != null) {
-                    return new TypeElementCodeType(typeElement);
-                }
-            }
-
-            return new PlainCodeType(s, false);
-        }
+    /**
+     * Gets the target method specification.
+     *
+     * @return Target method specification.
+     */
+    public MethodDeclaration getTargetMethod() {
+        return this.targetMethod;
     }
 
+    /**
+     * Gets the default method specification.
+     *
+     * @return Default method specification.
+     * @see com.github.jonathanxd.buildergenerator.annotation.DefaultImpl
+     */
+    public Optional<MethodTypeSpec> getDefaultMethod() {
+        return Optional.ofNullable(this.defaultMethod);
+    }
 }

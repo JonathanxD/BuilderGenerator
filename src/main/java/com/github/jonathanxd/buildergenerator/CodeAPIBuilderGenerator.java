@@ -28,7 +28,9 @@
 package com.github.jonathanxd.buildergenerator;
 
 import com.github.jonathanxd.buildergenerator.spec.BuilderSpec;
+import com.github.jonathanxd.buildergenerator.spec.MethodSpec;
 import com.github.jonathanxd.buildergenerator.spec.PropertySpec;
+import com.github.jonathanxd.buildergenerator.util.CTypeUtil;
 import com.github.jonathanxd.buildergenerator.util.InlineMethodInvoker;
 import com.github.jonathanxd.buildergenerator.util.MethodInvocationUtil;
 import com.github.jonathanxd.buildergenerator.util.MethodResolver;
@@ -40,7 +42,7 @@ import com.github.jonathanxd.codeapi.Types;
 import com.github.jonathanxd.codeapi.base.ClassDeclaration;
 import com.github.jonathanxd.codeapi.base.FieldAccess;
 import com.github.jonathanxd.codeapi.base.FieldDeclaration;
-import com.github.jonathanxd.codeapi.base.MethodInvocation;
+import com.github.jonathanxd.codeapi.base.MethodDeclaration;
 import com.github.jonathanxd.codeapi.base.TypeDeclaration;
 import com.github.jonathanxd.codeapi.base.VariableBase;
 import com.github.jonathanxd.codeapi.builder.ClassDeclarationBuilder;
@@ -61,15 +63,22 @@ import com.github.jonathanxd.codeapi.literal.Literals;
 import com.github.jonathanxd.codeapi.source.gen.PlainSourceGenerator;
 import com.github.jonathanxd.codeapi.type.CodeType;
 import com.github.jonathanxd.codeapi.type.Generic;
+import com.github.jonathanxd.codeapi.type.GenericType;
 import com.github.jonathanxd.codeapi.type.PlainCodeType;
+import com.github.jonathanxd.codeapi.util.CodeTypes;
+import com.github.jonathanxd.codeapi.util.source.CodeArgumentUtil;
 import com.github.jonathanxd.iutils.collection.CollectionUtils;
 import com.github.jonathanxd.iutils.object.Pair;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import kotlin.text.StringsKt;
@@ -122,6 +131,7 @@ public final class CodeAPIBuilderGenerator {
         CodeAPIBuilderGenerator.addConstructors(extendedProperties, baseClass, body);
         CodeAPIBuilderGenerator.addWithMethods(extendedProperties, classDeclaration, body);
         CodeAPIBuilderGenerator.addGetterMethods(extendedProperties, body);
+        CodeAPIBuilderGenerator.addDefMethod(builderBaseGeneric, body, builderSpec);
         CodeAPIBuilderGenerator.addBuildMethod(extendedProperties, baseClass, body, builderSpec);
 
         return classDeclaration;
@@ -229,6 +239,69 @@ public final class CodeAPIBuilderGenerator {
                             .build()
             );
         }
+    }
+
+    private static void addDefMethod(GenericType implementationType, MutableCodeSource mutableCodeSource, BuilderSpec builderSpec) {
+
+        CodeType builderBaseClass = builderSpec.getBuilderBaseClass();
+        Function<CodeType, String> getName = codeType -> codeType instanceof GenericType && !((GenericType) codeType).isType() ?  ((GenericType) codeType).getName() : null;
+
+        Function<CodeType, CodeType> fixer = CTypeUtil::resolve;
+
+        if(builderBaseClass instanceof GenericType) {
+            GenericType genericType = (GenericType) builderBaseClass;
+            GenericType.Bound[] bounds = genericType.getBounds();
+
+            if(bounds.length == 2) {
+                String fName = getName.apply(bounds[0].getType());
+                String sName = getName.apply(bounds[1].getType());
+
+                fixer = codeType -> {
+
+                    if(fName != null)
+                        codeType = CodeTypes.applyType(codeType, fName, CTypeUtil.resolve(implementationType.getBounds()[0].getType()));
+
+                    if(sName != null)
+                        codeType = CodeTypes.applyType(codeType, sName, CTypeUtil.resolve(implementationType.getBounds()[1].getType()));
+
+                    return CTypeUtil.resolve(codeType);
+                };
+            }
+
+        }
+
+        for (MethodSpec methodSpec : builderSpec.getMethodSpecs()) {
+            Optional<MethodTypeSpec> defaultMethodOpt = methodSpec.getDefaultMethod();
+
+            if(defaultMethodOpt.isPresent()) {
+                MethodDeclaration targetMethod = methodSpec.getTargetMethod();
+
+                CodeType returnType = fixer.apply(targetMethod.getReturnType());
+
+                List<CodeParameter> parameterList = new ArrayList<>();
+
+                for (CodeParameter codeParameter : targetMethod.getParameters()) {
+                    parameterList.add(codeParameter.builder().withType(fixer.apply(codeParameter.getType())).build());
+                }
+
+                MethodTypeSpec methodTypeSpec = defaultMethodOpt.get();
+
+                List<CodePart> arguments = CodeArgumentUtil.argumentsFromParameters(targetMethod.getParameters());
+
+                arguments.add(0, CodeAPI.accessThis());
+
+                mutableCodeSource.add(targetMethod.builder()
+                        .withReturnType(returnType)
+                        .withParameters(parameterList)
+                        .withBody(
+                                CodeSource.fromPart(
+                                        CodeAPI.returnValue(returnType,
+                                                CodeAPI.cast(methodTypeSpec.getTypeSpec().getReturnType(), returnType, MethodInvocationUtil.toInvocation(methodTypeSpec, arguments))))
+                        )
+                        .build());
+            }
+        }
+
     }
 
     private static void addBuildMethod(List<ExtendedProperty> properties, CodeType baseType, MutableCodeSource mutableCodeSource, BuilderSpec builderSpec) {

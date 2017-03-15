@@ -29,8 +29,11 @@ package com.github.jonathanxd.buildergenerator.util;
 
 import com.github.jonathanxd.codeapi.CodeAPI;
 import com.github.jonathanxd.codeapi.type.CodeType;
+import com.github.jonathanxd.codeapi.type.GenericType;
 import com.github.jonathanxd.codeapi.type.PlainCodeType;
 import com.github.jonathanxd.codeapi.util.GenericTypeUtil;
+import com.github.jonathanxd.codeapi.util.ModelCodeTypesKt;
+import com.github.jonathanxd.codeapi.util.TypeElementCodeType;
 import com.github.jonathanxd.iutils.type.TypeInfo;
 
 import javax.lang.model.element.ElementKind;
@@ -42,6 +45,22 @@ import javax.lang.model.util.Elements;
  * {@link TypeElement} and {@link TypeMirror} conversion to {@link CodeType}.
  */
 public class TypeElementUtil {
+
+
+    /**
+     * Convert {@link TypeMirror} to {@link CodeType}.
+     *
+     * @param typeMirror Type mirror.
+     * @return {@link CodeType} corresponding to {@link TypeMirror}.
+     */
+    public static CodeType fromGenericMirror(TypeMirror typeMirror) {
+        CodeType codeType = ModelCodeTypesKt.toCodeType(typeMirror, false);
+
+        /*while (codeType instanceof GenericType)
+            codeType = ((GenericType) codeType).getCodeType();*/
+
+        return codeType;
+    }
 
     /**
      * Convert {@link TypeMirror} to {@link CodeType}.
@@ -65,7 +84,7 @@ public class TypeElementUtil {
             try {
                 return CodeAPI.getJavaType(TypeInfo.resolveClass(s));
             } catch (Exception e) {
-                return new PlainCodeType(s, typeElement.getKind() == ElementKind.INTERFACE);
+                return new TypeElementCodeType(typeElement);
             }
         });
     }

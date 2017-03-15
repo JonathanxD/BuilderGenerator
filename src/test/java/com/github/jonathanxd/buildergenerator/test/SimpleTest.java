@@ -40,46 +40,15 @@ import javax.tools.JavaFileObject;
 
 public class SimpleTest {
 
-    public static final JavaFileObject INTERFACE = JavaFileObjects.forSourceLines("com.Person",
-            "package com;\n" +
-                    "public interface Person {\n" +
-                    "    String getName();\n" +
-                    "    int getAge();\n" +
-                    "    \n" +
-                    "    interface Builder<T extends Person, S extends Builder<T, S>> extends com.github.jonathanxd.buildergenerator.Builder<T, S> {\n" +
-                    "        S withName(String name);\n" +
-                    "        S withAge(int age);\n" +
-                    "    }\n" +
-                    "}\n");
+    public static final JavaFileObject INTERFACE = JavaFileObjects.forResource("Person.java");
 
-    public static final JavaFileObject IMPL = JavaFileObjects.forSourceLines("com.PersonImpl",
-            "package com;\n" +
-                    "@com.github.jonathanxd.buildergenerator.annotation.GenBuilder()\n" +
-                    "public class PersonImpl implements Person {\n" +
-                    "    private final String name;\n" +
-                    "    private final int age;\n" +
-                    "    \n" +
-                    "    public PersonImpl(String name, int age) {\n" +
-                    "        this.name = name;\n" +
-                    "        this.age = age;\n" +
-                    "    }\n" +
-                    "    \n" +
-                    "    @Override\n" +
-                    "    public String getName() {\n" +
-                    "        return this.name;\n" +
-                    "    }\n" +
-                    "    \n" +
-                    "    @Override\n" +
-                    "    public int getAge() {\n" +
-                    "        return this.age;\n" +
-                    "    }\n" +
-                    "    \n" +
-                    "}");
+    public static final JavaFileObject IMPL = JavaFileObjects.forResource("PersonImpl.java");
 
     @Test
     public void test() {
-        JavaSourcesSubjectFactory.javaSources().getSubject(new Fail(),
-                CollectionUtils.listOf(INTERFACE, IMPL))
+        JavaSourcesSubjectFactory.javaSources()
+                .getSubject(new Fail(),
+                        CollectionUtils.listOf(INTERFACE, IMPL))
                 .processedWith(new AnnotationProcessor())
                 .compilesWithoutError();
 

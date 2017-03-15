@@ -25,50 +25,31 @@
  *      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *      THE SOFTWARE.
  */
-package com.github.jonathanxd.buildergenerator.util;
+package com;
 
-import com.github.jonathanxd.codeapi.CodeAPI;
-import com.github.jonathanxd.codeapi.type.CodeType;
-import com.github.jonathanxd.codeapi.type.PlainCodeType;
-import com.github.jonathanxd.codeapi.util.CodeTypes;
-import com.github.jonathanxd.codeapi.util.GenericTypeUtil;
-import com.github.jonathanxd.codeapi.util.TypeElementCodeType;
-import com.github.jonathanxd.iutils.type.TypeInfo;
+import com.github.jonathanxd.buildergenerator.annotation.DefaultImpl;
+import com.github.jonathanxd.buildergenerator.annotation.MethodRef;
 
-import java.util.function.Function;
+public interface Person {
+    String getName();
 
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.util.Elements;
+    int getAge();
 
-/**
- * Type resolver, resolves class literal.
- *
- * @see TypeInfo#resolveClass(String)
- */
-public final class TypeResolver implements Function<String, CodeType> {
+    interface Builder<T extends Person, S extends Builder<T, S>> extends com.github.jonathanxd.buildergenerator.Builder<T, S> {
 
-    private final Elements elements;
+        @DefaultImpl(value = @MethodRef(value = DefaultImpls.class, name = "withName"))
+        S withName(Object o);
 
-    public TypeResolver(Elements elements) {
-        this.elements = elements;
-    }
+        S withName(String name);
 
-    @Override
-    public CodeType apply(String s) {
-        try {
-            return CodeAPI.getJavaType(TypeInfo.resolveClass(s));
-        } catch (Exception e) {
-            if (elements != null) {
-                TypeElement typeElement = elements.getTypeElement(s);
+        S withAge(int age);
 
-                if (typeElement != null) {
-                    return new TypeElementCodeType(typeElement);
-                }
+        public static class DefaultImpls {
+
+            public static Builder<Person, ?> withName(Builder<Person, ?> builder, Object o) {
+                return builder.withName((String) o);
             }
 
-            return new PlainCodeType(s, false);
         }
     }
-
 }

@@ -67,6 +67,16 @@ public final class Default {
     }
 
     /**
+     * Returns true if {@code defaultImpl} annotation is default.
+     *
+     * @param defaultImpl Default impl annotation.
+     * @return True if {@code defaultImpl} annotation is default.
+     */
+    public static boolean isDefaultDefaultImpl(Annotation defaultImpl) {
+        return isDefaultMethodRef(((Annotation) defaultImpl.getValues().get("value")));
+    }
+
+    /**
      * Returns true if {@code validator} annotation is default.
      *
      * @param validator Validator

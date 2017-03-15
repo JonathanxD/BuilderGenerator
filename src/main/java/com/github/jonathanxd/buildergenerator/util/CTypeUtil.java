@@ -27,48 +27,18 @@
  */
 package com.github.jonathanxd.buildergenerator.util;
 
-import com.github.jonathanxd.codeapi.CodeAPI;
 import com.github.jonathanxd.codeapi.type.CodeType;
-import com.github.jonathanxd.codeapi.type.PlainCodeType;
-import com.github.jonathanxd.codeapi.util.CodeTypes;
-import com.github.jonathanxd.codeapi.util.GenericTypeUtil;
-import com.github.jonathanxd.codeapi.util.TypeElementCodeType;
-import com.github.jonathanxd.iutils.type.TypeInfo;
+import com.github.jonathanxd.codeapi.type.GenericType;
 
-import java.util.function.Function;
+public class CTypeUtil {
 
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.util.Elements;
+    public static CodeType resolve(CodeType codeType) {
 
-/**
- * Type resolver, resolves class literal.
- *
- * @see TypeInfo#resolveClass(String)
- */
-public final class TypeResolver implements Function<String, CodeType> {
+        while (codeType instanceof GenericType)
+            codeType = ((GenericType) codeType).getCodeType();
 
-    private final Elements elements;
+        return codeType;
 
-    public TypeResolver(Elements elements) {
-        this.elements = elements;
-    }
-
-    @Override
-    public CodeType apply(String s) {
-        try {
-            return CodeAPI.getJavaType(TypeInfo.resolveClass(s));
-        } catch (Exception e) {
-            if (elements != null) {
-                TypeElement typeElement = elements.getTypeElement(s);
-
-                if (typeElement != null) {
-                    return new TypeElementCodeType(typeElement);
-                }
-            }
-
-            return new PlainCodeType(s, false);
-        }
     }
 
 }

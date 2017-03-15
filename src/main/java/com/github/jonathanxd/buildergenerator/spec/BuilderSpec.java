@@ -73,6 +73,11 @@ public final class BuilderSpec {
     private final List<PropertySpec> properties;
 
     /**
+     * Specification of non-property methods.
+     */
+    private final List<MethodSpec> methodSpecs;
+
+    /**
      * Construct builder specification.
      *
      * @param builderQualifiedName Builder qualified name.
@@ -81,8 +86,9 @@ public final class BuilderSpec {
      * @param factoryMethodName    Name of the factory method.
      * @param baseClass            Base class.
      * @param properties           Properties to generate builder.
+     * @param methodSpecs          Non-property method specification.
      */
-    public BuilderSpec(String builderQualifiedName, CodeType factoryClass, CodeType factoryResultType, String factoryMethodName, CodeType baseClass, CodeType builderBaseClass, List<PropertySpec> properties) {
+    public BuilderSpec(String builderQualifiedName, CodeType factoryClass, CodeType factoryResultType, String factoryMethodName, CodeType baseClass, CodeType builderBaseClass, List<PropertySpec> properties, List<MethodSpec> methodSpecs) {
         this.builderQualifiedName = builderQualifiedName;
         this.factoryClass = factoryClass;
         this.factoryResultType = factoryResultType;
@@ -90,6 +96,7 @@ public final class BuilderSpec {
         this.baseClass = baseClass;
         this.builderBaseClass = builderBaseClass;
         this.properties = properties;
+        this.methodSpecs = methodSpecs;
     }
 
     /**
@@ -154,5 +161,14 @@ public final class BuilderSpec {
      */
     public List<PropertySpec> getProperties() {
         return this.properties;
+    }
+
+    /**
+     * Gets the method specification of non-property methods.
+     *
+     * @return Method specification of non-property methods.
+     */
+    public List<MethodSpec> getMethodSpecs() {
+        return this.methodSpecs;
     }
 }

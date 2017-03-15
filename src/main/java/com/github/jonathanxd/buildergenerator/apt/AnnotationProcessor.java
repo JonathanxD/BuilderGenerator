@@ -29,9 +29,11 @@ package com.github.jonathanxd.buildergenerator.apt;
 
 import com.github.jonathanxd.buildergenerator.CodeAPIBuilderGenerator;
 import com.github.jonathanxd.buildergenerator.annotation.Conversions;
+import com.github.jonathanxd.buildergenerator.annotation.DefaultImpl;
 import com.github.jonathanxd.buildergenerator.annotation.GenBuilder;
 import com.github.jonathanxd.buildergenerator.annotation.PropertyInfo;
 import com.github.jonathanxd.buildergenerator.spec.BuilderSpec;
+import com.github.jonathanxd.buildergenerator.spec.MethodSpec;
 import com.github.jonathanxd.buildergenerator.spec.PropertySpec;
 import com.github.jonathanxd.buildergenerator.util.AnnotatedConstructUtil;
 import com.github.jonathanxd.buildergenerator.util.AnnotationMirrorUtil;
@@ -40,7 +42,11 @@ import com.github.jonathanxd.buildergenerator.util.FilerUtil;
 import com.github.jonathanxd.buildergenerator.util.TypeElementUtil;
 import com.github.jonathanxd.codeapi.Types;
 import com.github.jonathanxd.codeapi.base.Annotation;
+import com.github.jonathanxd.codeapi.base.MethodDeclaration;
 import com.github.jonathanxd.codeapi.base.TypeDeclaration;
+import com.github.jonathanxd.codeapi.builder.MethodDeclarationBuilder;
+import com.github.jonathanxd.codeapi.common.CodeModifier;
+import com.github.jonathanxd.codeapi.common.CodeParameter;
 import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
 import com.github.jonathanxd.codeapi.keyword.Keyword;
 import com.github.jonathanxd.codeapi.keyword.Keywords;
@@ -62,6 +68,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.FilerException;
@@ -91,6 +98,7 @@ public class AnnotationProcessor extends AbstractProcessor {
     private static final String BUILDER_GEN_ANNOTATION_CLASS = "com.github.jonathanxd.buildergenerator.annotation.GenBuilder";
     private static final String PROPERTY_INFO_ANNOTATION_CLASS = "com.github.jonathanxd.buildergenerator.annotation.PropertyInfo";
     private static final String INLINE_ANNOTATION_CLASS = "com.github.jonathanxd.buildergenerator.annotation.Inline";
+    private static final String DEFAULT_IMPL_ANNOTATION_CLASS = "com.github.jonathanxd.buildergenerator.annotation.DefaultImpl";
     private static final Pattern FQ_REGEX = Pattern.compile("([\\p{L}_$][\\p{L}\\p{N}_$]*\\.)*[\\p{L}_$][\\p{L}\\p{N}_$]*");
 
     /**
@@ -112,10 +120,40 @@ public class AnnotationProcessor extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
 
+        for (Element element : roundEnv.getElementsAnnotatedWith(DefaultImpl.class)) {
+            try {
+                if (element.getKind() == ElementKind.METHOD) {
+                    ExecutableElement executableElement = (ExecutableElement) element;
+
+
+                    Optional<AnnotationMirror> propertyInfoAnnotation = AnnotatedConstructUtil.getAnnotationMirror(executableElement, DEFAULT_IMPL_ANNOTATION_CLASS);
+
+                    AnnotationMirror annotationMirror = propertyInfoAnnotation.orElseThrow(() -> new IllegalStateException("Cannot find @DefaultImpl annotation"));
+
+                    Annotation annotation = (Annotation) AnnotationMirrorUtil.toCodeAPI(annotationMirror, this.processingEnvironment.getElementUtils());
+
+                    if (!MethodRefValidator.validate(executableElement, annotationMirror, (Annotation) annotation.getValues().get("value"), this.getMessager(), this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.DEFAULT_IMPL)) {
+                        return false;
+                    }
+
+
+                }
+            } catch (Throwable t) {
+                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "An error occurred '" + t.toString() + "'", element);
+                t.printStackTrace(new MessagerPrint(this.getMessager()));
+                return false;
+            }
+        }
+
         for (Element element : roundEnv.getElementsAnnotatedWith(PropertyInfo.class)) {
             try {
                 if (element.getKind() == ElementKind.METHOD) {
                     ExecutableElement executableElement = (ExecutableElement) element;
+
+                    if(AnnotatedConstructUtil.getAnnotationMirror(executableElement, DEFAULT_IMPL_ANNOTATION_CLASS).isPresent()) {
+                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Methods annotated with @DefaultImpl are not eligible to be a property, remove @PropertyInfo or @DefaultImpl annotation.", executableElement);
+                        return false;
+                    }
 
                     List<? extends VariableElement> parameters = executableElement.getParameters();
 
@@ -141,7 +179,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                             return false;
                         }
 
-                        if (!MethodRefValidator.validate(executableElement, propertyInfoMirror, (Annotation) defaultValue, propertyType, this.getMessager(), this.processingEnvironment.getElementUtils(), false)) {
+                        if (!MethodRefValidator.validate(executableElement, propertyInfoMirror, (Annotation) defaultValue, this.getMessager(), this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.DEFAULT_VALUE)) {
                             return false;
                         }
                     }
@@ -165,7 +203,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                                 return false;
                             }
 
-                            if (!MethodRefValidator.validate(executableElement, propertyInfoMirror, (Annotation) value, propertyType, this.getMessager(), this.processingEnvironment.getElementUtils(), true)) {
+                            if (!MethodRefValidator.validate(executableElement, propertyInfoMirror, (Annotation) value, this.getMessager(), this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.VALIDATOR)) {
                                 return false;
                             }
                         }
@@ -365,9 +403,10 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                     CodeType builderType = TypeElementUtil.toCodeType(builder);
 
+                    List<MethodSpec> methodSpecs = new ArrayList<>();
                     List<ExecutableElement> builderMethods = new ArrayList<>();
 
-                    this.consumeMethods(builder, builderMethods::add);
+
 
                     List<PropertySpec> propertySpecs = new ArrayList<>();
 
@@ -393,6 +432,42 @@ public class AnnotationProcessor extends AbstractProcessor {
                         }
 
                     }
+
+                    this.consumeMethods(builder, methodToConsume -> {
+                        Optional<AnnotationMirror> annotationMirror = AnnotatedConstructUtil.getAnnotationMirror(methodToConsume, "com.github.jonathanxd.buildergenerator.annotation.DefaultImpl");
+
+                        if(methodToConsume.isDefault() || annotationMirror.isPresent()) {
+
+                            if(!methodToConsume.isDefault()) {
+                                Annotation annotation = (Annotation) AnnotationMirrorUtil.toCodeAPI(annotationMirror.get(), this.processingEnvironment.getElementUtils());
+
+                                List<CodeParameter> collect = methodToConsume
+                                        .getParameters()
+                                        .stream()
+                                        .map(o -> new CodeParameter(TypeElementUtil.fromGenericMirror(o.asType())/*TypeElementUtil.toCodeType(o.asType(), this.processingEnvironment.getElementUtils())*/, o.getSimpleName().toString()))
+                                        .collect(Collectors.toList());
+
+                                CodeType[] ptypes = collect.stream().map(CodeParameter::getType).toArray(CodeType[]::new);
+                                CodeType rtype = TypeElementUtil.fromGenericMirror(methodToConsume.getReturnType());
+
+                                MethodDeclaration targetMethod = MethodDeclarationBuilder.builder()
+                                        .withModifiers(CodeModifier.PUBLIC)
+                                        .withName(methodToConsume.getSimpleName().toString())
+                                        .withReturnType(rtype)
+                                        .withParameters(collect)
+                                        .build();
+
+                                Optional<MethodTypeSpec> methodTypeSpec =
+                                        Conversions.CAPI.defaultImplToMethodSpec(annotation, rtype, ptypes);
+
+                                methodTypeSpec.ifPresent(spec -> methodSpecs.add(new MethodSpec(targetMethod, spec)));
+
+                            }
+                        } else {
+                            builderMethods.add(methodToConsume);
+                        }
+
+                    });
 
                     for (String s : propertyOrder) {
 
@@ -492,7 +567,7 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                     }
 
-                    BuilderSpec builderSpec = new BuilderSpec(builderQualifiedName, factoryClass, factoryResultType, factoryMethodName, baseType, builderType, propertySpecs);
+                    BuilderSpec builderSpec = new BuilderSpec(builderQualifiedName, factoryClass, factoryResultType, factoryMethodName, baseType, bdType, propertySpecs, methodSpecs);
 
 
                     if (!roundEnv.processingOver()) {
@@ -624,7 +699,7 @@ public class AnnotationProcessor extends AbstractProcessor {
 
     @Override
     public Set<String> getSupportedAnnotationTypes() {
-        return CollectionUtils.setOf(BUILDER_GEN_ANNOTATION_CLASS, INLINE_ANNOTATION_CLASS, PROPERTY_INFO_ANNOTATION_CLASS);
+        return CollectionUtils.setOf(BUILDER_GEN_ANNOTATION_CLASS, INLINE_ANNOTATION_CLASS, PROPERTY_INFO_ANNOTATION_CLASS, DEFAULT_IMPL_ANNOTATION_CLASS);
     }
 
     private Messager getMessager() {

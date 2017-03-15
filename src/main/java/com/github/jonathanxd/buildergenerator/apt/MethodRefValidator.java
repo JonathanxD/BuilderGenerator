@@ -28,22 +28,31 @@
 package com.github.jonathanxd.buildergenerator.apt;
 
 import com.github.jonathanxd.buildergenerator.annotation.PropertyInfo;
-import com.github.jonathanxd.buildergenerator.annotation.Validator;
 import com.github.jonathanxd.buildergenerator.util.AnnotatedConstructUtil;
+import com.github.jonathanxd.buildergenerator.util.CTypeUtil;
+import com.github.jonathanxd.buildergenerator.util.TypeElementUtil;
 import com.github.jonathanxd.codeapi.CodeAPI;
 import com.github.jonathanxd.codeapi.CodePart;
 import com.github.jonathanxd.codeapi.Types;
 import com.github.jonathanxd.codeapi.base.Annotation;
 import com.github.jonathanxd.codeapi.base.VariableBase;
+import com.github.jonathanxd.codeapi.common.CodeParameter;
 import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
 import com.github.jonathanxd.codeapi.type.CodeType;
 import com.github.jonathanxd.codeapi.type.LoadedCodeType;
+import com.github.jonathanxd.iutils.condition.Conditions;
 import com.github.jonathanxd.iutils.object.Pair;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
 
@@ -63,11 +72,10 @@ import javax.tools.Diagnostic;
  * com.github.jonathanxd.buildergenerator.annotation.Inline inline} methods, the validator will
  * check if the method is compiled.
  *
- * Attention: {@link com.github.jonathanxd.buildergenerator.annotation.MethodRef Annotation}
- * properties override return type and parameter type rules.
+ * Attention: Signature properties defined in {@link com.github.jonathanxd.buildergenerator.annotation.MethodRef
+ * MethodRef Annotation} overrides signatures specified by the {@link PropertyInfo}.
  */
 public class MethodRefValidator {
-
 
     /**
      * Validates the method.
@@ -75,21 +83,69 @@ public class MethodRefValidator {
      * @param annotated    Annotated element.
      * @param mirror       MethodRef Annotation mirror.
      * @param annotation   Annotation instance.
-     * @param propertyType Property type.
      * @param messager     Messager to log errors.
      * @param elements     Element utilities to resolve types.
-     * @param isValidator  True if the method to validate is the {@link Validator#value() validator
-     *                     method}.
+     * @param type         Type of the annotation to validate.
      * @return True if success, false if validation failed.
      */
-    public static boolean validate(ExecutableElement annotated, AnnotationMirror mirror, Annotation annotation, CodeType propertyType, Messager messager, Elements elements, boolean isValidator) {
+    public static boolean validate(ExecutableElement annotated, AnnotationMirror mirror, Annotation annotation, Messager messager, Elements elements, Type type) {
 
         CodeType codePart = CodeAPI.getJavaType(CodePart.class);
         CodeType varBase = CodeAPI.getJavaType(VariableBase.class);
 
-        Pair<MethodTypeSpec, ExecutableElement> resolvedMethodRef = isValidator
-                ? AptResolver.resolveMethodRef(annotation, codePart, new CodeType[]{varBase, codePart}, elements)
-                : AptResolver.resolveMethodRef(annotation, codePart, new CodeType[]{varBase}, elements);
+        Pair<MethodTypeSpec, ExecutableElement> resolvedMethodRef;
+        boolean reqPropertyType = type == Type.VALIDATOR || type == Type.DEFAULT_VALUE;
+
+        if(reqPropertyType) {
+            if(annotated.getParameters().size() != 1) {
+                messager.printMessage(Diagnostic.Kind.ERROR, "Builder property method MUST have only one argument.", annotated, mirror);
+                return false;
+            }
+        }
+
+        switch (type) {
+            case VALIDATOR: {
+                resolvedMethodRef = AptResolver.resolveMethodRef(annotation, codePart, new CodeType[]{varBase, codePart}, elements);
+                break;
+            }
+            case DEFAULT_VALUE: {
+                resolvedMethodRef = AptResolver.resolveMethodRef(annotation, codePart, new CodeType[]{varBase}, elements);
+                break;
+            }
+            case DEFAULT_IMPL: {
+                TypeElement receiverType = (TypeElement) annotated.getEnclosingElement();
+                CodeType receiver = TypeElementUtil.toCodeType(receiverType);
+
+                List<CodeType> typeList = new ArrayList<>();
+
+                typeList.add(receiver);
+
+                annotated.getParameters().stream()
+                        .map(o -> CTypeUtil.resolve(TypeElementUtil.toCodeType(o.asType(), elements)))
+                        .forEach(typeList::add);
+
+                CodeType rtype = CTypeUtil.resolve(TypeElementUtil.fromGenericMirror(annotated.getReturnType()));
+
+                resolvedMethodRef = AptResolver.resolveMethodRef(annotation, rtype, typeList.stream().toArray(CodeType[]::new), elements);
+
+
+                if (resolvedMethodRef == null) {
+                    messager.printMessage(Diagnostic.Kind.ERROR, "Referenced @DefaultImpl method cannot be found!", annotated, mirror);
+                    return true;
+                }
+
+                if (resolvedMethodRef._2() == null) {
+                    messager.printMessage(Diagnostic.Kind.ERROR, "Cannot find referenced @DefaultImpl method '" + resolvedMethodRef._1().toMethodString() + "'!", annotated, mirror);
+                    return true;
+                }
+
+                break;
+            }
+            default: {
+                messager.printMessage(Diagnostic.Kind.ERROR, "Invalid annotation type: '" + type + "'!", annotated, mirror);
+                return true;
+            }
+        }
 
         Pair<MethodTypeSpec, ExecutableElement> first = resolvedMethodRef;
 
@@ -98,10 +154,32 @@ public class MethodRefValidator {
                 && AnnotatedConstructUtil.getAnnotationMirror(resolvedMethodRef._2(), "com.github.jonathanxd.buildergenerator.annotation.Inline").isPresent();
 
         if (resolvedMethodRef == null || resolvedMethodRef._2() == null) {
-            CodeType baseRetType = isValidator ? Types.VOID : propertyType;
-            CodeType[] ptypes = isValidator
-                    ? new CodeType[]{propertyType, Types.STRING, Types.CLASS}
-                    : new CodeType[]{Types.STRING, Types.CLASS};
+            CodeType baseRetType;
+            CodeType[] ptypes;
+
+            CodeType propertyType = null;
+
+            if(reqPropertyType)
+                propertyType = TypeElementUtil.toCodeType(annotated.getParameters().get(0).asType(), elements);
+
+            switch (type) {
+                case VALIDATOR: {
+                    baseRetType = Types.VOID;
+                    ptypes = new CodeType[]{propertyType, Types.STRING, Types.CLASS};
+                    break;
+                }
+                case DEFAULT_VALUE: {
+                    baseRetType = propertyType;
+                    ptypes = new CodeType[]{Types.STRING, Types.CLASS};
+                    break;
+                }
+                default: {
+                    String methodRef = resolvedMethodRef == null ? "?" : resolvedMethodRef._1().toMethodString();
+
+                    messager.printMessage(Diagnostic.Kind.ERROR, "Cannot find referenced method '" + methodRef + "'!", annotated, mirror);
+                    return true;
+                }
+            }
 
             resolvedMethodRef = AptResolver.resolveMethodRef(annotation, baseRetType, ptypes, elements);
         }
@@ -138,6 +216,25 @@ public class MethodRefValidator {
         }
 
         return true;
+    }
+
+
+    public enum Type {
+        /**
+         * Validate {@link PropertyInfo#validator()} annotation.
+         */
+        VALIDATOR,
+
+        /**
+         * Validate {@link PropertyInfo#defaultValue()} annotation.
+         */
+        DEFAULT_VALUE,
+
+        /**
+         * Validate {@link com.github.jonathanxd.buildergenerator.annotation.DefaultImpl}
+         * annotation.
+         */
+        DEFAULT_IMPL
     }
 
 }

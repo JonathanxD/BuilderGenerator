@@ -25,50 +25,28 @@
  *      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *      THE SOFTWARE.
  */
-package com.github.jonathanxd.buildergenerator.util;
+package com.github.jonathanxd.buildergenerator.annotation;
 
-import com.github.jonathanxd.codeapi.CodeAPI;
-import com.github.jonathanxd.codeapi.type.CodeType;
-import com.github.jonathanxd.codeapi.type.PlainCodeType;
-import com.github.jonathanxd.codeapi.util.CodeTypes;
-import com.github.jonathanxd.codeapi.util.GenericTypeUtil;
-import com.github.jonathanxd.codeapi.util.TypeElementCodeType;
-import com.github.jonathanxd.iutils.type.TypeInfo;
-
-import java.util.function.Function;
-
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.util.Elements;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * Type resolver, resolves class literal.
- *
- * @see TypeInfo#resolveClass(String)
+ * Default method marker. Some JVM Languages does not compile interface methods with default
+ * implementations to Java 8 {@code default} methods. This annotation marks the method as default
+ * method and provide the target method to invoke. The method must be static and have a receiver
+ * parameter and a value parameter and return type of the same type of the annotated method.
  */
-public final class TypeResolver implements Function<String, CodeType> {
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface DefaultImpl {
 
-    private final Elements elements;
-
-    public TypeResolver(Elements elements) {
-        this.elements = elements;
-    }
-
-    @Override
-    public CodeType apply(String s) {
-        try {
-            return CodeAPI.getJavaType(TypeInfo.resolveClass(s));
-        } catch (Exception e) {
-            if (elements != null) {
-                TypeElement typeElement = elements.getTypeElement(s);
-
-                if (typeElement != null) {
-                    return new TypeElementCodeType(typeElement);
-                }
-            }
-
-            return new PlainCodeType(s, false);
-        }
-    }
+    /**
+     * Target static method to invoke.
+     *
+     * @return Target static method to invoke.
+     */
+    MethodRef value() default @MethodRef(value = Default.class, name = "");
 
 }
