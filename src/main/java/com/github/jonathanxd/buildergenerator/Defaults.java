@@ -61,6 +61,14 @@ public final class Defaults {
     }
 
     /**
+     * Returns self instance.
+     */
+    @Inline
+    public static CodePart self(MethodDeclaration methodDeclaration, List<CodePart> arguments) {
+        return CodeAPI.returnValue(methodDeclaration.getReturnType(), CodeAPI.accessThis());
+    }
+
+    /**
      * Convert box vararg into a list and call the same method with {@link List} as parameter type instead of
      * vararg.
      *
