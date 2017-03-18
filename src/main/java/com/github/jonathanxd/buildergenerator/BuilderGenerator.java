@@ -28,7 +28,10 @@
 package com.github.jonathanxd.buildergenerator;
 
 import com.github.jonathanxd.buildergenerator.spec.BuilderSpec;
-import com.github.jonathanxd.codeapi.base.TypeDeclaration;
+import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
+
+import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Builder generator interface.
@@ -39,8 +42,10 @@ public interface BuilderGenerator<T> {
      * Generates the builder class.
      *
      * @param builderSpec Builder specification.
+     * @param verifier    Verifier of generated methods (all generated methods will be passed to
+     *                    consumer). This consumer should check if all methods was implemented.
      * @return Generated builder classes.
      */
-    T generate(BuilderSpec builderSpec);
+    T generate(BuilderSpec builderSpec, Consumer<List<MethodTypeSpec>> verifier);
 
 }

@@ -60,6 +60,7 @@ import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
 import com.github.jonathanxd.codeapi.common.TypeSpec;
 import com.github.jonathanxd.codeapi.common.VariableRef;
 import com.github.jonathanxd.codeapi.factory.ConstructorFactory;
+import com.github.jonathanxd.codeapi.inspect.SourceInspect;
 import com.github.jonathanxd.codeapi.literal.Literals;
 import com.github.jonathanxd.codeapi.source.gen.PlainSourceGenerator;
 import com.github.jonathanxd.codeapi.type.CodeType;
@@ -78,6 +79,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -100,7 +102,7 @@ public final class CodeAPIBuilderGenerator {
         throw new IllegalStateException();
     }
 
-    static TypeDeclaration generate(BuilderSpec builderSpec) {
+    static TypeDeclaration generate(BuilderSpec builderSpec, Consumer<List<MethodTypeSpec>> verifier) {
 
         String builderName = builderSpec.getBuilderQualifiedName();
         CodeType baseClass = builderSpec.getBaseClass();
@@ -133,6 +135,16 @@ public final class CodeAPIBuilderGenerator {
         CodeAPIBuilderGenerator.addGetterMethods(extendedProperties, body);
         CodeAPIBuilderGenerator.addDefMethod(builderBaseGeneric, body, builderSpec);
         CodeAPIBuilderGenerator.addBuildMethod(extendedProperties, baseClass, body, builderSpec);
+
+        List<MethodTypeSpec> inspect = SourceInspect.find(codePart -> codePart instanceof MethodDeclaration)
+                .includeSource(true)
+                .mapTo(codePart -> {
+                    MethodDeclaration methodDeclaration = (MethodDeclaration) codePart;
+                    return new MethodTypeSpec(classDeclaration, methodDeclaration.getName(), new TypeSpec(methodDeclaration.getReturnType(), methodDeclaration.getParameters().stream().map(CodeParameter::getType).collect(Collectors.toList())));
+                })
+                .inspect(body);
+
+        verifier.accept(inspect);
 
         return classDeclaration;
     }
@@ -428,16 +440,17 @@ public final class CodeAPIBuilderGenerator {
     public static class Bytecode implements BuilderGenerator<BytecodeClass[]> {
 
         @Override
-        public BytecodeClass[] generate(BuilderSpec builderSpec) {
+        public BytecodeClass[] generate(BuilderSpec builderSpec, Consumer<List<MethodTypeSpec>> verifier) {
 
-            CodePart part = CodeAPIBuilderGenerator.generate(builderSpec);
+            CodePart part = CodeAPIBuilderGenerator.generate(builderSpec, verifier);
 
             BytecodeGenerator bytecodeGenerator = new BytecodeGenerator();
 
             bytecodeGenerator.getOptions().set(BytecodeOptions.VISIT_LINES, VisitLineType.FOLLOW_CODE_SOURCE);
 
             // Should we enable this? Compilation slowdown? hmmm, it is not good
-            bytecodeGenerator.getOptions().set(BytecodeOptions.GENERATE_BRIDGE_METHODS, Boolean.TRUE);
+            // Wait, CodeAPI does not support Javax Model elements, then it will have no effect at the moment
+            // bytecodeGenerator.getOptions().set(BytecodeOptions.GENERATE_BRIDGE_METHODS, Boolean.TRUE);
 
             return bytecodeGenerator.gen(part);
         }
@@ -446,9 +459,9 @@ public final class CodeAPIBuilderGenerator {
     public static class Source implements BuilderGenerator<Pair<TypeDeclaration, String>> {
 
         @Override
-        public Pair<TypeDeclaration, String> generate(BuilderSpec builderSpec) {
+        public Pair<TypeDeclaration, String> generate(BuilderSpec builderSpec, Consumer<List<MethodTypeSpec>> verifier) {
 
-            TypeDeclaration part = CodeAPIBuilderGenerator.generate(builderSpec);
+            TypeDeclaration part = CodeAPIBuilderGenerator.generate(builderSpec, verifier);
 
             PlainSourceGenerator sourceGenerator = new PlainSourceGenerator();
 

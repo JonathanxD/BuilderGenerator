@@ -28,7 +28,6 @@
 package com.github.jonathanxd.buildergenerator.apt;
 
 import com.github.jonathanxd.buildergenerator.CodeAPIBuilderGenerator;
-import com.github.jonathanxd.buildergenerator.annotation.Conversions;
 import com.github.jonathanxd.buildergenerator.annotation.DefaultImpl;
 import com.github.jonathanxd.buildergenerator.annotation.GenBuilder;
 import com.github.jonathanxd.buildergenerator.annotation.PropertyInfo;
@@ -41,14 +40,12 @@ import com.github.jonathanxd.buildergenerator.util.AnnotationMirrorUtil;
 import com.github.jonathanxd.buildergenerator.util.ExecutableElementsUtil;
 import com.github.jonathanxd.buildergenerator.util.FilerUtil;
 import com.github.jonathanxd.buildergenerator.util.TypeElementUtil;
-import com.github.jonathanxd.codeapi.Types;
 import com.github.jonathanxd.codeapi.base.Annotation;
 import com.github.jonathanxd.codeapi.base.MethodDeclaration;
 import com.github.jonathanxd.codeapi.base.TypeDeclaration;
 import com.github.jonathanxd.codeapi.builder.MethodDeclarationBuilder;
 import com.github.jonathanxd.codeapi.common.CodeModifier;
 import com.github.jonathanxd.codeapi.common.CodeParameter;
-import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
 import com.github.jonathanxd.codeapi.keyword.Keyword;
 import com.github.jonathanxd.codeapi.keyword.Keywords;
 import com.github.jonathanxd.codeapi.type.CodeType;
@@ -56,6 +53,7 @@ import com.github.jonathanxd.codeapi.type.GenericType;
 import com.github.jonathanxd.codeapi.util.Identity;
 import com.github.jonathanxd.codeapi.util.ModelCodeTypesKt;
 import com.github.jonathanxd.iutils.collection.CollectionUtils;
+import com.github.jonathanxd.iutils.container.primitivecontainers.BooleanContainer;
 import com.github.jonathanxd.iutils.object.Pair;
 
 import java.io.IOException;
@@ -577,7 +575,10 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                         CodeAPIBuilderGenerator.Source builderGenerator = new CodeAPIBuilderGenerator.Source();
 
-                        Pair<TypeDeclaration, String> pair = builderGenerator.generate(builderSpec);
+                        TypeElement finalBuilder = builder;
+                        Pair<TypeDeclaration, String> pair = builderGenerator.generate(builderSpec, new MethodsChecker(this, builder, s -> {
+                            messager.printMessage(Diagnostic.Kind.WARNING, s, finalBuilder);
+                        }));
 
                         TypeDeclaration declaration = pair._1();
 
@@ -652,7 +653,7 @@ public class AnnotationProcessor extends AbstractProcessor {
 
     }
 
-    private void consumeMethods(TypeElement typeElement, Consumer<ExecutableElement> consumer) {
+    void consumeMethods(TypeElement typeElement, Consumer<ExecutableElement> consumer) {
         for (Element element : typeElement.getEnclosedElements()) {
             if (element.getKind() == ElementKind.METHOD && element instanceof ExecutableElement) {
                 consumer.accept((ExecutableElement) element);
