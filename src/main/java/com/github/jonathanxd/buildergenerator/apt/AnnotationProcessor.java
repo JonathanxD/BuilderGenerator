@@ -575,10 +575,7 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                         CodeAPIBuilderGenerator.Source builderGenerator = new CodeAPIBuilderGenerator.Source();
 
-                        TypeElement finalBuilder = builder;
-                        Pair<TypeDeclaration, String> pair = builderGenerator.generate(builderSpec, new MethodsChecker(this, builder, s -> {
-                            messager.printMessage(Diagnostic.Kind.WARNING, s, finalBuilder);
-                        }));
+                        Pair<TypeDeclaration, String> pair = builderGenerator.generate(builderSpec, methodTypeSpecs -> {});
 
                         TypeDeclaration declaration = pair._1();
 
