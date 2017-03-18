@@ -374,7 +374,8 @@ public class AnnotationProcessor extends AbstractProcessor {
                     List<ExecutableElement> executables = new ArrayList<>();
 
                     this.consumeMethods(baseTypeElement, e -> {
-                        if (executables.stream().noneMatch(elem -> elem.getSimpleName().toString().equals(e.getSimpleName().toString())))
+                        String name = e.getSimpleName().toString();
+                        if (executables.stream().noneMatch(elem -> elem.getSimpleName().toString().equals(name)))
                             executables.add(e);
                     });
 
@@ -549,7 +550,10 @@ public class AnnotationProcessor extends AbstractProcessor {
                                 String name = from.getDefaultsPropertyName();
 
                                 if (!name.equals(s)) {
-                                    if (!propertyOrder.contains(name)) {
+
+                                    Optional<ExecutableElement> propertyGetter = ExecutableElementsUtil.get(executables, "get" + StringsKt.capitalize(name));
+
+                                    if (!propertyGetter.isPresent()) {
                                         this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Specified property name '" + name + "' cannot be found!.", withMethod, mirror.get());
                                         return false;
                                     }
