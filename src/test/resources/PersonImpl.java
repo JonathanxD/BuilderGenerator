@@ -29,16 +29,21 @@ package com;
 
 import com.github.jonathanxd.buildergenerator.annotation.GenBuilder;
 
+import java.util.List;
+import java.util.Set;
+
 @GenBuilder
 public class PersonImpl implements Person {
     private final String name;
     private final int age;
     private final com.Person.Image image;
+    private final Set<com.Person> parents;
 
-    public PersonImpl(String name, int age, com.Person.Image image) {
+    public PersonImpl(String name, int age, com.Person.Image image, Set<com.Person> parents) {
         this.name = name;
         this.age = age;
         this.image = image;
+        this.parents = parents;
     }
 
     @Override
@@ -56,4 +61,8 @@ public class PersonImpl implements Person {
         return this.image;
     }
 
+    @Override
+    public Set<com.Person> getParents() {
+        return this.parents;
+    }
 }

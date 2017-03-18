@@ -293,25 +293,26 @@ public final class CodeAPIBuilderGenerator {
 
                 List<CodePart> arguments = CodeArgumentUtil.argumentsFromParameters(targetMethod.getParameters());
 
-                arguments.add(0, CodeAPI.accessThis());
-
                 /////////////////////////////////////////////////////////////////////////////////////////////////////////
+                MethodTypeSpec methodTypeSpec = methodRefSpec.getMethodTypeSpec();
 
-                CodeSource body;
-
-                if(method.isPresent()) {
-                    body = CodeSource.fromPart(method.get().apply(new Object[]{CodeAPI.accessThis(), arguments}));
-                } else {
-                    MethodTypeSpec methodTypeSpec = methodRefSpec.getMethodTypeSpec();
-                    body = CodeSource.fromPart(
-                            CodeAPI.returnValue(returnType, CodeAPI.cast(methodTypeSpec.getTypeSpec().getReturnType(), returnType, MethodInvocationUtil.toInvocation(methodTypeSpec, arguments))));
-                }
+                MutableCodeSource body = new MutableCodeSource();
 
                 mutableCodeSource.add(targetMethod.builder()
                         .withReturnType(returnType)
                         .withParameters(parameterList)
                         .withBody(body)
                         .build());
+
+                if(method.isPresent()) {
+                    body.add(method.get().apply(new Object[]{targetMethod, arguments}));
+                } else {
+                    arguments.add(0, CodeAPI.accessThis());
+
+                    body.add(CodeAPI.returnValue(returnType, CodeAPI.cast(methodTypeSpec.getTypeSpec().getReturnType(), returnType, MethodInvocationUtil.toInvocation(methodTypeSpec, arguments))));
+                }
+
+
             }
         }
 

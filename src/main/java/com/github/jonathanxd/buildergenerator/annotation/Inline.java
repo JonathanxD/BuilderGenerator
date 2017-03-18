@@ -48,8 +48,8 @@ import java.lang.annotation.Target;
  *
  * For {@link PropertyInfo#defaultValue()} no additional parameters is required.
  *
- * For {@link DefaultImpl#value()} two parameters are required, first is the {@code receiver} and the
- * type is {@link com.github.jonathanxd.codeapi.CodePart}, the second is {@code parameters}, the
+ * For {@link DefaultImpl#value()} two parameters are required, first is the {@code annotatedMethod} and the
+ * type is {@link com.github.jonathanxd.codeapi.base.MethodDeclaration}, the second is {@code parameters}, the
  * type is a {@link java.util.List} of {@link com.github.jonathanxd.codeapi.CodePart}.
  *
  * Note: This annotation only works for compiled methods, {@link com.github.jonathanxd.buildergenerator.apt.MethodRefValidator}

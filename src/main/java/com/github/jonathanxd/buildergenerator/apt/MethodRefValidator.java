@@ -36,6 +36,7 @@ import com.github.jonathanxd.codeapi.CodeAPI;
 import com.github.jonathanxd.codeapi.CodePart;
 import com.github.jonathanxd.codeapi.Types;
 import com.github.jonathanxd.codeapi.base.Annotation;
+import com.github.jonathanxd.codeapi.base.MethodDeclaration;
 import com.github.jonathanxd.codeapi.base.VariableBase;
 import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
 import com.github.jonathanxd.codeapi.type.CodeType;
@@ -138,7 +139,7 @@ public class MethodRefValidator {
                 break;
             }
             case DEFAULT_IMPL: {
-                resolvedMethodRef = AptResolver.resolveMethodRef(annotation, codePart, new CodeType[]{codePart, Types.LIST /* List<CodePart> */}, elements);
+                resolvedMethodRef = AptResolver.resolveMethodRef(annotation, codePart, new CodeType[]{CodeAPI.getJavaType(MethodDeclaration.class), Types.LIST /* List<CodePart> */}, elements);
                 break;
             }
             default: {
