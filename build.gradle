@@ -6,7 +6,7 @@ plugins {
 }
 
 group 'com.github.jonathanxd'
-version '1.0.12'
+version '1.0.13'
 
 apply plugin: 'idea'
 apply plugin: 'java'
@@ -34,7 +34,7 @@ configurations {
 
 ext.bytecode_writer_version = '3.2.5-3.2.0-a'
 ext.source_writer_version = '3.2.5-3.2.1'
-ext.codeapi_version = '3.3.1'
+ext.codeapi_version = '3.3.1-extra'
 ext.jwiutils_version = '3.6.0'
 
 dependencies {

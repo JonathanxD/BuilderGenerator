@@ -36,9 +36,11 @@ import java.lang.annotation.Target;
  * Marks the {@link Validator} or {@link MethodRef} to be inlined.
  *
  * This operation depends on the implementation of the {@link com.github.jonathanxd.buildergenerator.BuilderGenerator},
- * the default generator will require that method return a {@link com.github.jonathanxd.codeapi.CodePart},
- * and have at least 1 parameter of type {@link com.github.jonathanxd.codeapi.base.VariableBase},
- * this parameter is the {@code property info}.
+ * the default generator will require that method return a {@link com.github.jonathanxd.codeapi.CodePart}.
+ *
+ * For {@link PropertyInfo#validator()} and {@link PropertyInfo#defaultValue()} a parameter of type
+ * {@link com.github.jonathanxd.codeapi.base.VariableBase} is required, this parameter is the {@code
+ * property info}
  *
  * For {@link PropertyInfo#validator()}, a second parameter is required, this parameter must be of
  * {@link com.github.jonathanxd.codeapi.CodePart} type, this parameter is the access to value to
@@ -46,8 +48,13 @@ import java.lang.annotation.Target;
  *
  * For {@link PropertyInfo#defaultValue()} no additional parameters is required.
  *
+ * For {@link DefaultImpl#value()} two parameters are required, first is the {@code receiver} and the
+ * type is {@link com.github.jonathanxd.codeapi.CodePart}, the second is {@code parameters}, the
+ * type is a {@link java.util.List} of {@link com.github.jonathanxd.codeapi.CodePart}.
+ *
  * Note: This annotation only works for compiled methods, {@link com.github.jonathanxd.buildergenerator.apt.MethodRefValidator}
- * will throw a exception if a non-compiled method is referenced from a {@link MethodRef} annotation.
+ * will throw a exception if a non-compiled method is referenced from a {@link MethodRef}
+ * annotation.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)

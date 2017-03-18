@@ -28,6 +28,7 @@
 package com.github.jonathanxd.buildergenerator;
 
 import com.github.jonathanxd.buildergenerator.spec.BuilderSpec;
+import com.github.jonathanxd.buildergenerator.spec.MethodRefSpec;
 import com.github.jonathanxd.buildergenerator.spec.MethodSpec;
 import com.github.jonathanxd.buildergenerator.spec.PropertySpec;
 import com.github.jonathanxd.buildergenerator.util.CTypeUtil;
@@ -70,12 +71,11 @@ import com.github.jonathanxd.codeapi.util.source.CodeArgumentUtil;
 import com.github.jonathanxd.iutils.collection.CollectionUtils;
 import com.github.jonathanxd.iutils.object.Pair;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
@@ -148,8 +148,10 @@ public final class CodeAPIBuilderGenerator {
                     .withType(property.propertySpec.getType())
                     .withName(property.propertySpec.getName());
 
+
             if (propertyDefaultValue != null)
                 valueBuilder.withValue(propertyDefaultValue);
+
 
             FieldDeclaration value = valueBuilder.build();
 
@@ -179,7 +181,7 @@ public final class CodeAPIBuilderGenerator {
 
             CodePart getterInvoke = CodeAPI.invoke(InvokeType.get(baseType), baseType, base, "get" + StringsKt.capitalize(defaultsPropertyName), new TypeSpec(type, Collections.emptyList()), Collections.emptyList());
 
-            if(propertySpec.isOptional()) {
+            if (propertySpec.isOptional()) {
                 getterInvoke = CodeAPI.invokeVirtual(Optional.class, getterInvoke, "orElse", CodeAPI.typeSpec(Object.class, Object.class), Collections.singletonList(Literals.NULL));
             }
 
@@ -244,24 +246,24 @@ public final class CodeAPIBuilderGenerator {
     private static void addDefMethod(GenericType implementationType, MutableCodeSource mutableCodeSource, BuilderSpec builderSpec) {
 
         CodeType builderBaseClass = builderSpec.getBuilderBaseClass();
-        Function<CodeType, String> getName = codeType -> codeType instanceof GenericType && !((GenericType) codeType).isType() ?  ((GenericType) codeType).getName() : null;
+        Function<CodeType, String> getName = codeType -> codeType instanceof GenericType && !((GenericType) codeType).isType() ? ((GenericType) codeType).getName() : null;
 
         Function<CodeType, CodeType> fixer = CTypeUtil::resolve;
 
-        if(builderBaseClass instanceof GenericType) {
+        if (builderBaseClass instanceof GenericType) {
             GenericType genericType = (GenericType) builderBaseClass;
             GenericType.Bound[] bounds = genericType.getBounds();
 
-            if(bounds.length == 2) {
+            if (bounds.length == 2) {
                 String fName = getName.apply(bounds[0].getType());
                 String sName = getName.apply(bounds[1].getType());
 
                 fixer = codeType -> {
 
-                    if(fName != null)
+                    if (fName != null)
                         codeType = CodeTypes.applyType(codeType, fName, CTypeUtil.resolve(implementationType.getBounds()[0].getType()));
 
-                    if(sName != null)
+                    if (sName != null)
                         codeType = CodeTypes.applyType(codeType, sName, CTypeUtil.resolve(implementationType.getBounds()[1].getType()));
 
                     return CTypeUtil.resolve(codeType);
@@ -271,11 +273,16 @@ public final class CodeAPIBuilderGenerator {
         }
 
         for (MethodSpec methodSpec : builderSpec.getMethodSpecs()) {
-            Optional<MethodTypeSpec> defaultMethodOpt = methodSpec.getDefaultMethod();
+            Optional<MethodRefSpec> defaultMethodOpt = methodSpec.getDefaultMethod();
 
-            if(defaultMethodOpt.isPresent()) {
+            if (defaultMethodOpt.isPresent()) {
+
+                MethodRefSpec methodRefSpec = defaultMethodOpt.get();
+                Optional<InlineMethodInvoker> method = MethodResolver.resolve(() -> defaultMethodOpt);
+
                 MethodDeclaration targetMethod = methodSpec.getTargetMethod();
 
+                /////////////////////////////////////////////////////////////////////////////////////////////////////////
                 CodeType returnType = fixer.apply(targetMethod.getReturnType());
 
                 List<CodeParameter> parameterList = new ArrayList<>();
@@ -284,20 +291,26 @@ public final class CodeAPIBuilderGenerator {
                     parameterList.add(codeParameter.builder().withType(fixer.apply(codeParameter.getType())).build());
                 }
 
-                MethodTypeSpec methodTypeSpec = defaultMethodOpt.get();
-
                 List<CodePart> arguments = CodeArgumentUtil.argumentsFromParameters(targetMethod.getParameters());
 
                 arguments.add(0, CodeAPI.accessThis());
 
+                /////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                CodeSource body;
+
+                if(method.isPresent()) {
+                    body = CodeSource.fromPart(method.get().apply(new Object[]{CodeAPI.accessThis(), arguments}));
+                } else {
+                    MethodTypeSpec methodTypeSpec = methodRefSpec.getMethodTypeSpec();
+                    body = CodeSource.fromPart(
+                            CodeAPI.returnValue(returnType, CodeAPI.cast(methodTypeSpec.getTypeSpec().getReturnType(), returnType, MethodInvocationUtil.toInvocation(methodTypeSpec, arguments))));
+                }
+
                 mutableCodeSource.add(targetMethod.builder()
                         .withReturnType(returnType)
                         .withParameters(parameterList)
-                        .withBody(
-                                CodeSource.fromPart(
-                                        CodeAPI.returnValue(returnType,
-                                                CodeAPI.cast(methodTypeSpec.getTypeSpec().getReturnType(), returnType, MethodInvocationUtil.toInvocation(methodTypeSpec, arguments))))
-                        )
+                        .withBody(body)
                         .build());
             }
         }
@@ -348,21 +361,21 @@ public final class CodeAPIBuilderGenerator {
         }
 
 
-        Optional<MethodTypeSpec> validatorSpecOpt = property.getValidatorSpec();
+        Optional<MethodRefSpec> validatorSpecOpt = property.getValidatorSpec();
 
         if (validatorSpecOpt.isPresent()) {
             if (invoker != null) {
                 CodePart apply = invoker.apply(new Object[]{new VariableRef(property.getType(), property.getName()), codePart});
                 mutableCodeSource.add(apply);
             } else {
-                mutableCodeSource.add(MethodInvocationUtil.validationToInvocation(validatorSpecOpt.get(), codePart, property));
+                mutableCodeSource.add(MethodInvocationUtil.validationToInvocation(validatorSpecOpt.get().getMethodTypeSpec(), codePart, property));
             }
         }
     }
 
     private static CodePart getPropertyDefaultValue(PropertySpec property, InlineMethodInvoker invoker) {
 
-        Optional<MethodTypeSpec> defaultValueSpec = property.getDefaultValueSpec();
+        Optional<MethodRefSpec> defaultValueSpec = property.getDefaultValueSpec();
 
         CodeType type = property.getType();
 
@@ -370,8 +383,7 @@ public final class CodeAPIBuilderGenerator {
             if (invoker != null) {
                 return invoker.apply(new Object[]{new VariableRef(type, property.getName())});
             } else {
-
-                return MethodInvocationUtil.defaultValueToInvocation(defaultValueSpec.get(), property);
+                return MethodInvocationUtil.defaultValueToInvocation(defaultValueSpec.get().getMethodTypeSpec(), property);
             }
         } else {
             if (type.isPrimitive()) {

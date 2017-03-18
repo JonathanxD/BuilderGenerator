@@ -27,13 +27,25 @@
  */
 package com;
 
+import com.github.jonathanxd.buildergenerator.DefaultValues;
 import com.github.jonathanxd.buildergenerator.annotation.DefaultImpl;
+import com.github.jonathanxd.buildergenerator.annotation.Inline;
 import com.github.jonathanxd.buildergenerator.annotation.MethodRef;
+import com.github.jonathanxd.buildergenerator.annotation.PropertyInfo;
+import com.github.jonathanxd.codeapi.CodeAPI;
+import com.github.jonathanxd.codeapi.CodePart;
+import com.github.jonathanxd.codeapi.Types;
+import com.github.jonathanxd.codeapi.common.TypeSpec;
+import com.github.jonathanxd.iutils.collection.CollectionUtils;
+
+import java.util.List;
 
 public interface Person {
     String getName();
 
     int getAge();
+
+    Image getImage();
 
     interface Builder<T extends Person, S extends Builder<T, S>> extends com.github.jonathanxd.buildergenerator.Builder<T, S> {
 
@@ -44,12 +56,35 @@ public interface Person {
 
         S withAge(int age);
 
+        @PropertyInfo(defaultValue = @MethodRef(value = DefaultValues.class, name = "empty"))
+        S withImage(Image imagem);
+
         public static class DefaultImpls {
 
             public static Builder<Person, ?> withName(Builder<Person, ?> builder, Object o) {
                 return builder.withName((String) o);
             }
 
+        }
+    }
+
+
+    class Image {
+        public static final Image EMPTY = new Image(new byte[0]);
+
+        private final byte[] image;
+
+        public Image(byte[] image) {
+            this.image = image;
+        }
+
+        public static Image empty() {
+            return Image.EMPTY;
+        }
+
+
+        public byte[] getImage() {
+            return this.image.clone();
         }
     }
 }

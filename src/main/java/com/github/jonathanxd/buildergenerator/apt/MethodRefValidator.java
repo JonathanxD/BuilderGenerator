@@ -28,6 +28,7 @@
 package com.github.jonathanxd.buildergenerator.apt;
 
 import com.github.jonathanxd.buildergenerator.annotation.PropertyInfo;
+import com.github.jonathanxd.buildergenerator.spec.MethodRefSpec;
 import com.github.jonathanxd.buildergenerator.util.AnnotatedConstructUtil;
 import com.github.jonathanxd.buildergenerator.util.CTypeUtil;
 import com.github.jonathanxd.buildergenerator.util.TypeElementUtil;
@@ -36,23 +37,22 @@ import com.github.jonathanxd.codeapi.CodePart;
 import com.github.jonathanxd.codeapi.Types;
 import com.github.jonathanxd.codeapi.base.Annotation;
 import com.github.jonathanxd.codeapi.base.VariableBase;
-import com.github.jonathanxd.codeapi.common.CodeParameter;
 import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
 import com.github.jonathanxd.codeapi.type.CodeType;
 import com.github.jonathanxd.codeapi.type.LoadedCodeType;
-import com.github.jonathanxd.iutils.condition.Conditions;
+import com.github.jonathanxd.codeapi.util.CodeTypes;
 import com.github.jonathanxd.iutils.object.Pair;
+
+import org.jetbrains.annotations.NonNls;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
 
@@ -90,6 +90,31 @@ public class MethodRefValidator {
      */
     public static boolean validate(ExecutableElement annotated, AnnotationMirror mirror, Annotation annotation, Messager messager, Elements elements, Type type) {
 
+        try {
+            MethodRefValidator.get(annotated, annotation, elements, type);
+        } catch (IllegalArgumentException e) {
+            messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage(), annotated, mirror);
+            return false;
+        } catch (ReferencedMethodException e) {
+            messager.printMessage(Diagnostic.Kind.WARNING, e.getMessage(), annotated, mirror);
+            messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage(), e.getReferencedMethod());
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Validates the method.
+     *
+     * @param annotated    Annotated element.
+     * @param annotation   Annotation instance.
+     * @param elements     Element utilities to resolve types.
+     * @param type         Type of the annotation to validate.
+     * @return True if success, false if validation failed.
+     */
+    public static MethodRefSpec get(ExecutableElement annotated, Annotation annotation, Elements elements, Type type) {
+
         CodeType codePart = CodeAPI.getJavaType(CodePart.class);
         CodeType varBase = CodeAPI.getJavaType(VariableBase.class);
 
@@ -98,11 +123,11 @@ public class MethodRefValidator {
 
         if(reqPropertyType) {
             if(annotated.getParameters().size() != 1) {
-                messager.printMessage(Diagnostic.Kind.ERROR, "Builder property method MUST have only one argument.", annotated, mirror);
-                return false;
+                throw new IllegalArgumentException("Builder property method MUST have only one argument.");
             }
         }
 
+        // Inline method resolver
         switch (type) {
             case VALIDATOR: {
                 resolvedMethodRef = AptResolver.resolveMethodRef(annotation, codePart, new CodeType[]{varBase, codePart}, elements);
@@ -113,37 +138,11 @@ public class MethodRefValidator {
                 break;
             }
             case DEFAULT_IMPL: {
-                TypeElement receiverType = (TypeElement) annotated.getEnclosingElement();
-                CodeType receiver = TypeElementUtil.toCodeType(receiverType);
-
-                List<CodeType> typeList = new ArrayList<>();
-
-                typeList.add(receiver);
-
-                annotated.getParameters().stream()
-                        .map(o -> CTypeUtil.resolve(TypeElementUtil.toCodeType(o.asType(), elements)))
-                        .forEach(typeList::add);
-
-                CodeType rtype = CTypeUtil.resolve(TypeElementUtil.fromGenericMirror(annotated.getReturnType()));
-
-                resolvedMethodRef = AptResolver.resolveMethodRef(annotation, rtype, typeList.stream().toArray(CodeType[]::new), elements);
-
-
-                if (resolvedMethodRef == null) {
-                    messager.printMessage(Diagnostic.Kind.ERROR, "Referenced @DefaultImpl method cannot be found!", annotated, mirror);
-                    return true;
-                }
-
-                if (resolvedMethodRef._2() == null) {
-                    messager.printMessage(Diagnostic.Kind.ERROR, "Cannot find referenced @DefaultImpl method '" + resolvedMethodRef._1().toMethodString() + "'!", annotated, mirror);
-                    return true;
-                }
-
+                resolvedMethodRef = AptResolver.resolveMethodRef(annotation, codePart, new CodeType[]{codePart, Types.LIST /* List<CodePart> */}, elements);
                 break;
             }
             default: {
-                messager.printMessage(Diagnostic.Kind.ERROR, "Invalid annotation type: '" + type + "'!", annotated, mirror);
-                return true;
+                throw new IllegalArgumentException("Invalid annotation type: '" + type + "'!");
             }
         }
 
@@ -173,11 +172,28 @@ public class MethodRefValidator {
                     ptypes = new CodeType[]{Types.STRING, Types.CLASS};
                     break;
                 }
+                case DEFAULT_IMPL: {
+                    TypeElement receiverType = (TypeElement) annotated.getEnclosingElement();
+                    CodeType receiver = TypeElementUtil.toCodeType(receiverType);
+
+                    List<CodeType> typeList = new ArrayList<>();
+
+                    typeList.add(receiver);
+
+                    annotated.getParameters().stream()
+                            .map(o -> CTypeUtil.resolve(TypeElementUtil.toCodeType(o.asType(), elements)))
+                            .forEach(typeList::add);
+
+                    CodeType rtype = CTypeUtil.resolve(TypeElementUtil.fromGenericMirror(annotated.getReturnType()));
+
+                    ptypes = typeList.stream().toArray(CodeType[]::new);
+                    baseRetType = rtype;
+                    break;
+                }
                 default: {
                     String methodRef = resolvedMethodRef == null ? "?" : resolvedMethodRef._1().toMethodString();
 
-                    messager.printMessage(Diagnostic.Kind.ERROR, "Cannot find referenced method '" + methodRef + "'!", annotated, mirror);
-                    return true;
+                    throw new IllegalArgumentException("Cannot find referenced method '" + methodRef + "'!");
                 }
             }
 
@@ -185,13 +201,11 @@ public class MethodRefValidator {
         }
 
         if (resolvedMethodRef == null) {
-            messager.printMessage(Diagnostic.Kind.ERROR, "Invalid provided method reference!", annotated, mirror);
-            return true;
+            throw new IllegalArgumentException("Invalid provided method reference!");
         } else if (resolvedMethodRef._2() == null) {
             String additional = first == resolvedMethodRef || first == null ? "" : "(or '" + first._1().toMethodString() + "')";
 
-            messager.printMessage(Diagnostic.Kind.ERROR, "Cannot find referenced method '" + resolvedMethodRef._1().toMethodString() + "'" + additional + "!", annotated, mirror);
-            return true;
+            throw new IllegalArgumentException("Cannot find referenced method '" + resolvedMethodRef._1().toMethodString() + "'" + additional + "!");
         } else {
             MethodTypeSpec spec = resolvedMethodRef._1();
 
@@ -199,25 +213,57 @@ public class MethodRefValidator {
 
             CodeType localization = spec.getLocalization();
 
+            CodeType concreteType = CodeTypes.getConcreteType(localization);
+
             if (isInline) {
-                if (!(localization instanceof LoadedCodeType<?>)) {
-                    messager.printMessage(Diagnostic.Kind.ERROR, "Referenced inline method '" + spec.toMethodString() + "' is not compiled yet. This method cannot be inlined!", annotated, mirror);
-                    messager.printMessage(Diagnostic.Kind.ERROR, "Inline method referenced from another context is not compiled yet!", executableElement);
-                    return false;
+                if (!(concreteType instanceof LoadedCodeType<?>)) {
+                    throw new ReferencedMethodException("Referenced inline method '" + spec.toMethodString() + "' is not compiled yet. This method cannot be inlined!", executableElement);
                 }
             }
 
             if (!executableElement.getModifiers().contains(Modifier.PUBLIC) || !executableElement.getModifiers().contains(Modifier.STATIC)) {
-                messager.printMessage(Diagnostic.Kind.ERROR, "Referenced method '" + spec.toMethodString() + "' must be public and static!", annotated, mirror);
-                messager.printMessage(Diagnostic.Kind.ERROR, "Method referenced from another context is not public and static!", executableElement);
-                return false;
+                throw new ReferencedMethodException("Referenced method '" + spec.toMethodString() + "' must be public and static!", executableElement);
             }
 
         }
 
-        return true;
+        return new MethodRefSpec(isInline, resolvedMethodRef._1());
     }
 
+
+    static class ReferencedMethodException extends RuntimeException {
+
+        private final ExecutableElement referencedMethod;
+
+        public ReferencedMethodException(ExecutableElement referencedMethod) {
+            super();
+            this.referencedMethod = referencedMethod;
+        }
+
+        public ReferencedMethodException(@NonNls String message, ExecutableElement referencedMethod) {
+            super(message);
+            this.referencedMethod = referencedMethod;
+        }
+
+        public ReferencedMethodException(String message, Throwable cause, ExecutableElement referencedMethod) {
+            super(message, cause);
+            this.referencedMethod = referencedMethod;
+        }
+
+        public ReferencedMethodException(Throwable cause, ExecutableElement referencedMethod) {
+            super(cause);
+            this.referencedMethod = referencedMethod;
+        }
+
+        protected ReferencedMethodException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace, ExecutableElement referencedMethod) {
+            super(message, cause, enableSuppression, writableStackTrace);
+            this.referencedMethod = referencedMethod;
+        }
+
+        public ExecutableElement getReferencedMethod() {
+            return this.referencedMethod;
+        }
+    }
 
     public enum Type {
         /**

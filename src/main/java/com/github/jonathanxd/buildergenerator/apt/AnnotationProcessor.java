@@ -33,6 +33,7 @@ import com.github.jonathanxd.buildergenerator.annotation.DefaultImpl;
 import com.github.jonathanxd.buildergenerator.annotation.GenBuilder;
 import com.github.jonathanxd.buildergenerator.annotation.PropertyInfo;
 import com.github.jonathanxd.buildergenerator.spec.BuilderSpec;
+import com.github.jonathanxd.buildergenerator.spec.MethodRefSpec;
 import com.github.jonathanxd.buildergenerator.spec.MethodSpec;
 import com.github.jonathanxd.buildergenerator.spec.PropertySpec;
 import com.github.jonathanxd.buildergenerator.util.AnnotatedConstructUtil;
@@ -448,7 +449,6 @@ public class AnnotationProcessor extends AbstractProcessor {
                                         .map(o -> new CodeParameter(TypeElementUtil.fromGenericMirror(o.asType())/*TypeElementUtil.toCodeType(o.asType(), this.processingEnvironment.getElementUtils())*/, o.getSimpleName().toString()))
                                         .collect(Collectors.toList());
 
-                                CodeType[] ptypes = collect.stream().map(CodeParameter::getType).toArray(CodeType[]::new);
                                 CodeType rtype = TypeElementUtil.fromGenericMirror(methodToConsume.getReturnType());
 
                                 MethodDeclaration targetMethod = MethodDeclarationBuilder.builder()
@@ -458,10 +458,9 @@ public class AnnotationProcessor extends AbstractProcessor {
                                         .withParameters(collect)
                                         .build();
 
-                                Optional<MethodTypeSpec> methodTypeSpec =
-                                        Conversions.CAPI.defaultImplToMethodSpec(annotation, rtype, ptypes);
+                                MethodRefSpec methodRefSpec = MethodRefValidator.get(methodToConsume, (Annotation) annotation.getValues().get("value"), this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.DEFAULT_IMPL);
 
-                                methodTypeSpec.ifPresent(spec -> methodSpecs.add(new MethodSpec(targetMethod, spec)));
+                                methodSpecs.add(new MethodSpec(targetMethod, methodRefSpec));
 
                             }
                         } else {
@@ -545,7 +544,7 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                             if (mirror.isPresent()) {
 
-                                PropertySpec from = from(s, type, mirror.get(), isNullable, isOptional);
+                                PropertySpec from = this.from(s, type, withMethod, mirror.get(), isNullable, isOptional);
 
                                 String name = from.getDefaultsPropertyName();
 
@@ -632,26 +631,22 @@ public class AnnotationProcessor extends AbstractProcessor {
         return false;
     }
 
-    private PropertySpec from(String name, CodeType type, AnnotationMirror annotationMirror, boolean isNullable_, boolean isOptional) {
+    private PropertySpec from(String name, CodeType type, ExecutableElement annotated, AnnotationMirror annotationMirror, boolean isNullable_, boolean isOptional) {
 
         AnnotationMirrorHelper annotationMirrorHelper = new AnnotationMirrorHelper(annotationMirror, processingEnvironment.getElementUtils());
-
 
         boolean isNullable = annotationMirrorHelper.<Boolean>get("isNullable").orElse(isNullable_);
 
         String defaultsPropertyName = annotationMirrorHelper.<String>get("defaultsPropertyName").orElse(name);
 
-        MethodTypeSpec defaultValue = Conversions.CAPI.toMethodSpec(
-                annotationMirrorHelper.<Annotation>get("defaultValue").orElse(null),
-                type,
-                new CodeType[]{Types.STRING}
-        ).orElse(null);
+        MethodRefSpec defaultValue = annotationMirrorHelper.<Annotation>get("defaultValue")
+                .map(annotation -> MethodRefValidator.get(annotated, annotation, this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.DEFAULT_VALUE))
+                .orElse(null);
 
-        MethodTypeSpec validator = Conversions.CAPI.validatorToMethodSpec(
-                annotationMirrorHelper.<Annotation>get("validator").orElse(null),
-                type,
-                new CodeType[]{Types.STRING}
-        ).orElse(null);
+
+        MethodRefSpec validator = annotationMirrorHelper.<Annotation>get("validator")
+                .map(annotation -> MethodRefValidator.get(annotated, annotation, this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.VALIDATOR))
+                .orElse(null);
 
         return new PropertySpec(name, defaultsPropertyName, type, isNullable, isOptional, defaultValue, validator);
 

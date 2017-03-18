@@ -25,35 +25,52 @@
  *      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *      THE SOFTWARE.
  */
-package com;
+package com.github.jonathanxd.buildergenerator.spec;
 
-import com.github.jonathanxd.buildergenerator.annotation.GenBuilder;
+import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
 
-@GenBuilder
-public class PersonImpl implements Person {
-    private final String name;
-    private final int age;
-    private final com.Person.Image image;
+/**
+ * Specification of a method reference.
+ */
+public class MethodRefSpec {
 
-    public PersonImpl(String name, int age, com.Person.Image image) {
-        this.name = name;
-        this.age = age;
-        this.image = image;
+    /**
+     * Referenced method is marked to {@link com.github.jonathanxd.buildergenerator.annotation.Inline}.
+     */
+    private final boolean isInline;
+
+    /**
+     * Specification of method.
+     */
+    private final MethodTypeSpec methodTypeSpec;
+
+    /**
+     * Create a method reference specification.
+     *
+     * @param isInline       Referenced method is marked to {@link com.github.jonathanxd.buildergenerator.annotation.Inline}.
+     * @param methodTypeSpec Specification of method.
+     */
+    public MethodRefSpec(boolean isInline, MethodTypeSpec methodTypeSpec) {
+        this.isInline = isInline;
+        this.methodTypeSpec = methodTypeSpec;
     }
 
-    @Override
-    public String getName() {
-        return this.name;
+
+    /**
+     * Returns true if this method is marked to {@link com.github.jonathanxd.buildergenerator.annotation.Inline}.
+     *
+     * @return True if this method is marked to {@link com.github.jonathanxd.buildergenerator.annotation.Inline}.
+     */
+    public boolean isInline() {
+        return this.isInline;
     }
 
-    @Override
-    public int getAge() {
-        return this.age;
+    /**
+     * Gets the method reference specification.
+     *
+     * @return Method reference specification.
+     */
+    public MethodTypeSpec getMethodTypeSpec() {
+        return this.methodTypeSpec;
     }
-
-    @Override
-    public com.Person.Image getImage() {
-        return this.image;
-    }
-
 }

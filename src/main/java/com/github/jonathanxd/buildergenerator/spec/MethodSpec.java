@@ -48,9 +48,9 @@ public class MethodSpec {
      *
      * @see com.github.jonathanxd.buildergenerator.annotation.DefaultImpl
      */
-    private final MethodTypeSpec defaultMethod;
+    private final MethodRefSpec defaultMethod;
 
-    public MethodSpec(MethodDeclaration targetMethod, MethodTypeSpec defaultMethod) {
+    public MethodSpec(MethodDeclaration targetMethod, MethodRefSpec defaultMethod) {
         Objects.requireNonNull(targetMethod);
         this.targetMethod = targetMethod;
         this.defaultMethod = defaultMethod;
@@ -71,7 +71,7 @@ public class MethodSpec {
      * @return Default method specification.
      * @see com.github.jonathanxd.buildergenerator.annotation.DefaultImpl
      */
-    public Optional<MethodTypeSpec> getDefaultMethod() {
+    public Optional<MethodRefSpec> getDefaultMethod() {
         return Optional.ofNullable(this.defaultMethod);
     }
 }

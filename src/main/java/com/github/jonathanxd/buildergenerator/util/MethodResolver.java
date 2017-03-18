@@ -29,11 +29,14 @@ package com.github.jonathanxd.buildergenerator.util;
 
 import com.github.jonathanxd.buildergenerator.annotation.Inline;
 import com.github.jonathanxd.buildergenerator.annotation.PropertyInfo;
+import com.github.jonathanxd.buildergenerator.spec.MethodRefSpec;
+import com.github.jonathanxd.buildergenerator.spec.MethodSpec;
 import com.github.jonathanxd.buildergenerator.spec.PropertySpec;
 import com.github.jonathanxd.codeapi.CodePart;
 import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
 import com.github.jonathanxd.codeapi.type.CodeType;
 import com.github.jonathanxd.codeapi.type.LoadedCodeType;
+import com.github.jonathanxd.codeapi.util.CodeTypes;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -74,16 +77,27 @@ public final class MethodResolver {
         return MethodResolver.resolve(propertySpec::getDefaultValueSpec);
     }
 
+    /**
+     * Resolve the {@link com.github.jonathanxd.buildergenerator.annotation.DefaultImpl#value()} method.
+     *
+     * @param methodSpec Method specification.
+     * @return {@link Optional} of the default implementation invoker, or an empty {@link Optional} if the method
+     * cannot be found.
+     */
+    public static Optional<InlineMethodInvoker> resolveDefaultImpl(MethodSpec methodSpec) {
+        return MethodResolver.resolve(methodSpec::getDefaultMethod);
+    }
+
 
     /**
      * Resolve the {@link Inline inlinable} and returns the invoker of the method.
      *
-     * @param supplier Provider of {@link MethodTypeSpec inlinable method specification}.
+     * @param supplier Provider of {@link MethodRefSpec inlinable method specification}.
      * @return {@link Optional} of the inline method invoker, or an empty {@link Optional} if the
      * method cannot be found.
      */
-    public static Optional<InlineMethodInvoker> resolve(Supplier<Optional<MethodTypeSpec>> supplier) {
-        Optional<MethodTypeSpec> validatorSpec = supplier.get();
+    public static Optional<InlineMethodInvoker> resolve(Supplier<Optional<MethodRefSpec>> supplier) {
+        Optional<MethodRefSpec> validatorSpec = supplier.get();
 
         if (!validatorSpec.isPresent())
             return Optional.empty();
@@ -107,11 +121,16 @@ public final class MethodResolver {
     /**
      * Resolves the {@link Method} instance from {@link MethodTypeSpec}.
      *
-     * @param methodTypeSpec Method specification.
+     * @param methodRefSpec Method specification.
      * @return {@link Optional} of the found {@link Method}, or empty {@link Optional} if method
      * cannot be found.
      */
-    public static Optional<Method> resolve(MethodTypeSpec methodTypeSpec) {
+    public static Optional<Method> resolve(MethodRefSpec methodRefSpec) {
+
+        if(!methodRefSpec.isInline())
+            return Optional.empty();
+
+        MethodTypeSpec methodTypeSpec = methodRefSpec.getMethodTypeSpec();
 
         Class<?> localization = MethodResolver.getClassOrNull(methodTypeSpec.getLocalization());
         String methodName = methodTypeSpec.getMethodName();
@@ -119,7 +138,7 @@ public final class MethodResolver {
         Class<?>[] parameterTypes = methodTypeSpec.getTypeSpec().getParameterTypes().stream().map(MethodResolver::getClassOrNull).toArray(Class[]::new);
 
         if (localization == null || returnType == null || ArraysKt.any(parameterTypes, Objects::isNull))
-            return Optional.empty();
+            throw new IllegalArgumentException("Failed to find runtime types of inline method! MethodSpec: '"+methodTypeSpec.toMethodString()+"'!");
 
         try {
             Method m = localization.getDeclaredMethod(methodName, parameterTypes);
@@ -127,14 +146,10 @@ public final class MethodResolver {
             if (!Modifier.isPublic(m.getModifiers()) || !Modifier.isStatic(m.getModifiers()))
                 throw new IllegalArgumentException("Provided method must be public and static!");
 
-            if (m.isAnnotationPresent(Inline.class)) {
-                return Optional.of(m);
-            }
+            return Optional.of(m);
         } catch (NoSuchMethodException e) {
-            return Optional.empty();
+            throw new IllegalArgumentException("Failed to find inline method! MethodSpec: '"+methodTypeSpec.toMethodString()+"'!", e);
         }
-
-        return Optional.empty();
 
     }
 
@@ -146,6 +161,9 @@ public final class MethodResolver {
      * otherwise.
      */
     private static Class<?> getClassOrNull(CodeType codeType) {
+
+        codeType = CodeTypes.getConcreteType(codeType);
+
         if (!(codeType instanceof LoadedCodeType<?>))
             return null;
 

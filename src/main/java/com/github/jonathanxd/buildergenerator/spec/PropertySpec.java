@@ -65,14 +65,14 @@ public final class PropertySpec {
     /**
      * Default value method provider.
      */
-    private final MethodTypeSpec defaultValueSpec;
+    private final MethodRefSpec defaultValueSpec;
 
     /**
      * Validator provider.
      */
-    private final MethodTypeSpec validatorSpec;
+    private final MethodRefSpec validatorSpec;
 
-    public PropertySpec(String name, String defaultsPropertyName, CodeType type, boolean isNullable, boolean isOptional, MethodTypeSpec defaultValueSpec, MethodTypeSpec validatorSpec) {
+    public PropertySpec(String name, String defaultsPropertyName, CodeType type, boolean isNullable, boolean isOptional, MethodRefSpec defaultValueSpec, MethodRefSpec validatorSpec) {
         this.name = name;
         this.defaultsPropertyName = defaultsPropertyName;
         this.type = type;
@@ -132,7 +132,7 @@ public final class PropertySpec {
      *
      * @return Default value provider specification.
      */
-    public Optional<MethodTypeSpec> getDefaultValueSpec() {
+    public Optional<MethodRefSpec> getDefaultValueSpec() {
         return Optional.ofNullable(this.defaultValueSpec);
     }
 
@@ -141,7 +141,7 @@ public final class PropertySpec {
      *
      * @return Validator provider specification.
      */
-    public Optional<MethodTypeSpec> getValidatorSpec() {
+    public Optional<MethodRefSpec> getValidatorSpec() {
         return Optional.ofNullable(this.validatorSpec);
     }
 }
