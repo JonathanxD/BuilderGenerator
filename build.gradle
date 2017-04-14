@@ -17,7 +17,7 @@ license {
     header rootProject.file("LICENSE_HEADER")
 }
 
-defaultTasks 'licenseFormat', 'build', 'test', 'jar', 'shadowJar'
+defaultTasks 'licenseFormat', 'build', 'test', 'jar', 'shadowJar', 'apOnlyJar'
 
 sourceCompatibility = 1.8
 
@@ -76,6 +76,24 @@ task apOnlyJar(type: ShadowJar, dependsOn: classes) {
     classifier = 'ap'
     from sourceSets.main.output
     configurations = [project.configurations.apOnly]
+}
+
+shadowJar { // Relocate
+    relocate 'com.github.jonathanxd.codeapi', 'com.github.jonathanxd.buidergenerator.codeapi'
+    relocate 'org.objectweb.asm', 'com.github.jonathanxd.buidergenerator.asm'
+    relocate 'com.google', 'com.github.jonathanxd.buidergenerator.com.google'
+    relocate 'org.jetbrains', 'com.github.jonathanxd.buidergenerator.org.jetbrains'
+    relocate 'org.intellij', 'com.github.jonathanxd.buidergenerator.org.intellij'
+    relocate 'kotlin', 'com.github.jonathanxd.buidergenerator.kotlin'
+}
+
+apOnlyJar {
+    relocate 'com.github.jonathanxd.codeapi', 'com.github.jonathanxd.buidergenerator.codeapi'
+    relocate 'org.objectweb.asm', 'com.github.jonathanxd.buidergenerator.asm'
+    relocate 'com.google', 'com.github.jonathanxd.buidergenerator.com.google'
+    relocate 'org.jetbrains', 'com.github.jonathanxd.buidergenerator.org.jetbrains'
+    relocate 'org.intellij', 'com.github.jonathanxd.buidergenerator.org.intellij'
+    relocate 'kotlin', 'com.github.jonathanxd.buidergenerator.kotlin'
 }
 
 artifacts {
