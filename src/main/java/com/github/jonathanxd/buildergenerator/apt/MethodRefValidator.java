@@ -47,7 +47,9 @@ import com.github.jonathanxd.iutils.object.Pair;
 import org.jetbrains.annotations.NonNls;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.AnnotationMirror;
@@ -121,6 +123,7 @@ public class MethodRefValidator {
 
         Pair<MethodTypeSpec, ExecutableElement> resolvedMethodRef;
         boolean reqPropertyType = type == Type.VALIDATOR || type == Type.DEFAULT_VALUE;
+        boolean isThis = false;
 
         if(reqPropertyType) {
             if(annotated.getParameters().size() != 1) {
@@ -187,7 +190,7 @@ public class MethodRefValidator {
 
                     CodeType rtype = CTypeUtil.resolve(TypeElementUtil.fromGenericMirror(annotated.getReturnType()));
 
-                    ptypes = typeList.stream().toArray(CodeType[]::new);
+                    ptypes = typeList.toArray(new CodeType[typeList.size()]);
                     baseRetType = rtype;
                     break;
                 }
@@ -199,6 +202,13 @@ public class MethodRefValidator {
             }
 
             resolvedMethodRef = AptResolver.resolveMethodRef(annotation, baseRetType, ptypes, elements);
+
+            if(resolvedMethodRef == null && type == Type.DEFAULT_IMPL) {
+                resolvedMethodRef = MethodRefValidator.resolveThis(annotation, annotated, elements);
+                if(resolvedMethodRef != null)
+                    isThis = true;
+            }
+
         }
 
         if (resolvedMethodRef == null) {
@@ -222,13 +232,39 @@ public class MethodRefValidator {
                 }
             }
 
-            if (!executableElement.getModifiers().contains(Modifier.PUBLIC) || !executableElement.getModifiers().contains(Modifier.STATIC)) {
+            if (!isThis && (!executableElement.getModifiers().contains(Modifier.PUBLIC)
+                            || !executableElement.getModifiers().contains(Modifier.STATIC))) {
                 throw new ReferencedMethodException("Referenced method '" + spec.toMethodString() + "' must be public and static!", executableElement);
             }
 
         }
 
-        return new MethodRefSpec(isInline, resolvedMethodRef._1());
+        return new MethodRefSpec(isThis, isInline, resolvedMethodRef._1());
+    }
+
+    private static Pair<MethodTypeSpec, ExecutableElement> resolveThis(Annotation annotation, ExecutableElement annotated, Elements elements) {
+
+        CodeType[] ptypes = annotated.getParameters().stream()
+                .map(o -> TypeElementUtil.toCodeType(o.asType(), elements))
+                .toArray(CodeType[]::new);
+
+        CodeType rtype = TypeElementUtil.toCodeType(annotated.getReturnType(), elements);
+
+        Pair<MethodTypeSpec, ExecutableElement> resolve = AptResolver.resolveMethodRef(annotation, rtype, ptypes, elements);
+
+        if(resolve != null && resolve._1() != null && resolve._2() == null) {
+            String methodName = resolve._1().getMethodName();
+
+            if (methodName.startsWith(":") && methodName.length() > 1) {
+                Map<String, Object> values = new HashMap<>(annotation.getValues());
+
+                values.put("name", methodName.substring(1));
+
+                return AptResolver.resolveMethodRef(annotation.builder().withValues(values).build(), rtype, ptypes, elements);
+            }
+        }
+
+        return null;
     }
 
 

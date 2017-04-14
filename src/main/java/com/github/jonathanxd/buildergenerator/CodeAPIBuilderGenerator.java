@@ -83,6 +83,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import kotlin.collections.CollectionsKt;
 import kotlin.text.StringsKt;
 
 /**
@@ -307,8 +308,13 @@ public final class CodeAPIBuilderGenerator {
 
                 /////////////////////////////////////////////////////////////////////////////////////////////////////////
                 MethodTypeSpec methodTypeSpec = methodRefSpec.getMethodTypeSpec();
+                List<CodeType> parameterTypes = methodTypeSpec.getTypeSpec().getParameterTypes();
 
                 MutableCodeSource body = new MutableCodeSource();
+
+                if(methodRefSpec.isThis()) {
+                    arguments = CollectionsKt.mapIndexed(arguments, (integer, codePart) -> CodeAPI.cast(parameterList.get(integer).getType(), parameterTypes.get(integer), codePart));
+                }
 
                 mutableCodeSource.add(targetMethod.builder()
                         .withReturnType(returnType)
@@ -319,9 +325,11 @@ public final class CodeAPIBuilderGenerator {
                 if(method.isPresent()) {
                     body.add(method.get().apply(new Object[]{targetMethod, arguments}));
                 } else {
-                    arguments.add(0, CodeAPI.accessThis());
+                    if(!methodRefSpec.isThis()) {
+                        arguments.add(0, CodeAPI.accessThis());
+                    }
 
-                    body.add(CodeAPI.returnValue(returnType, CodeAPI.cast(methodTypeSpec.getTypeSpec().getReturnType(), returnType, MethodInvocationUtil.toInvocation(methodTypeSpec, arguments))));
+                    body.add(CodeAPI.returnValue(returnType, CodeAPI.cast(methodTypeSpec.getTypeSpec().getReturnType(), returnType, MethodInvocationUtil.toInvocation(methodRefSpec.isThis(), methodTypeSpec, arguments))));
                 }
 
 
@@ -381,7 +389,7 @@ public final class CodeAPIBuilderGenerator {
                 CodePart apply = invoker.apply(new Object[]{new VariableRef(property.getType(), property.getName()), codePart});
                 mutableCodeSource.add(apply);
             } else {
-                mutableCodeSource.add(MethodInvocationUtil.validationToInvocation(validatorSpecOpt.get().getMethodTypeSpec(), codePart, property));
+                mutableCodeSource.add(MethodInvocationUtil.validationToInvocation(false, validatorSpecOpt.get().getMethodTypeSpec(), codePart, property));
             }
         }
     }
@@ -396,7 +404,7 @@ public final class CodeAPIBuilderGenerator {
             if (invoker != null) {
                 return invoker.apply(new Object[]{new VariableRef(type, property.getName())});
             } else {
-                return MethodInvocationUtil.defaultValueToInvocation(defaultValueSpec.get().getMethodTypeSpec(), property);
+                return MethodInvocationUtil.defaultValueToInvocation(false, defaultValueSpec.get().getMethodTypeSpec(), property);
             }
         } else {
             if (type.isPrimitive()) {

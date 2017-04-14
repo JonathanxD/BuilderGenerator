@@ -33,6 +33,7 @@ import com.github.jonathanxd.buildergenerator.spec.PropertySpec;
 import com.github.jonathanxd.codeapi.CodeAPI;
 import com.github.jonathanxd.codeapi.CodePart;
 import com.github.jonathanxd.codeapi.base.MethodInvocation;
+import com.github.jonathanxd.codeapi.common.InvokeType;
 import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
 import com.github.jonathanxd.codeapi.common.TypeSpec;
 import com.github.jonathanxd.codeapi.literal.Literals;
@@ -59,8 +60,8 @@ public final class MethodInvocationUtil {
      * @param propertySpec   Property specification.
      * @return Invocation of the validator method.
      */
-    public static MethodInvocation validationToInvocation(MethodTypeSpec methodTypeSpec, CodePart valueAccess, PropertySpec propertySpec) {
-        return MethodInvocationUtil.toInvocation(methodTypeSpec, CollectionUtils.listOf(valueAccess, Literals.STRING(propertySpec.getName()), Literals.CLASS(propertySpec.getType())));
+    public static MethodInvocation validationToInvocation(boolean isThis, MethodTypeSpec methodTypeSpec, CodePart valueAccess, PropertySpec propertySpec) {
+        return MethodInvocationUtil.toInvocation(isThis, methodTypeSpec, CollectionUtils.listOf(valueAccess, Literals.STRING(propertySpec.getName()), Literals.CLASS(propertySpec.getType())));
     }
 
     /**
@@ -70,8 +71,8 @@ public final class MethodInvocationUtil {
      * @param propertySpec   Property specification.
      * @return Invocation of default value method.
      */
-    public static MethodInvocation defaultValueToInvocation(MethodTypeSpec methodTypeSpec, PropertySpec propertySpec) {
-        return MethodInvocationUtil.toInvocation(methodTypeSpec, CollectionUtils.listOf(Literals.STRING(propertySpec.getName()), Literals.CLASS(propertySpec.getType())));
+    public static MethodInvocation defaultValueToInvocation(boolean isThis, MethodTypeSpec methodTypeSpec, PropertySpec propertySpec) {
+        return MethodInvocationUtil.toInvocation(isThis, methodTypeSpec, CollectionUtils.listOf(Literals.STRING(propertySpec.getName()), Literals.CLASS(propertySpec.getType())));
     }
 
     /**
@@ -81,8 +82,17 @@ public final class MethodInvocationUtil {
      * @param arguments      Arguments to pass to method.
      * @return Method invocation.
      */
-    public static MethodInvocation toInvocation(MethodTypeSpec methodTypeSpec, List<CodePart> arguments) {
-        return CodeAPI.invokeStatic(methodTypeSpec.getLocalization(), methodTypeSpec.getMethodName(), methodTypeSpec.getTypeSpec(), arguments);
+    public static MethodInvocation toInvocation(boolean isThis, MethodTypeSpec methodTypeSpec, List<CodePart> arguments) {
+
+        InvokeType type = InvokeType.INVOKE_STATIC;
+        CodePart access = methodTypeSpec.getLocalization();
+
+        if(isThis) {
+            type = InvokeType.get(methodTypeSpec.getLocalization());
+            access = CodeAPI.accessThis();
+        }
+
+        return CodeAPI.invoke(type, methodTypeSpec.getLocalization(), access, methodTypeSpec.getMethodName(), methodTypeSpec.getTypeSpec(), arguments);
     }
 
     /**

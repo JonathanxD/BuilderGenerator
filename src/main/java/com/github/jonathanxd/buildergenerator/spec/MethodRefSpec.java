@@ -35,6 +35,11 @@ import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
 public class MethodRefSpec {
 
     /**
+     * Referenced method is a local method.
+     */
+    private final boolean isThis;
+
+    /**
      * Referenced method is marked to {@link com.github.jonathanxd.buildergenerator.annotation.Inline}.
      */
     private final boolean isInline;
@@ -47,14 +52,24 @@ public class MethodRefSpec {
     /**
      * Create a method reference specification.
      *
+     * @param isThis         Referenced method is a local method.
      * @param isInline       Referenced method is marked to {@link com.github.jonathanxd.buildergenerator.annotation.Inline}.
      * @param methodTypeSpec Specification of method.
      */
-    public MethodRefSpec(boolean isInline, MethodTypeSpec methodTypeSpec) {
+    public MethodRefSpec(boolean isThis, boolean isInline, MethodTypeSpec methodTypeSpec) {
+        this.isThis = isThis;
         this.isInline = isInline;
         this.methodTypeSpec = methodTypeSpec;
     }
 
+
+    /**
+     * Returns true if referenced method is a local method.
+     * @return True if referenced method is a local method.
+     */
+    public boolean isThis() {
+        return this.isThis;
+    }
 
     /**
      * Returns true if this method is marked to {@link com.github.jonathanxd.buildergenerator.annotation.Inline}.

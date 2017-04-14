@@ -56,6 +56,9 @@ public interface Person {
         @DefaultImpl(value = @MethodRef(value = DefaultImpls.class, name = "withName", parameterTypes = {Builder.class, Object.class}))
         S withName(Object o);
 
+        @DefaultImpl(value = @MethodRef(value = Builder.class, name = ":withName", parameterTypes = String.class))
+        S withName(CharSequence sequence);
+
         S withName(String name);
 
         S withAge(int age);

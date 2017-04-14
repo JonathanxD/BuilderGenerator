@@ -44,6 +44,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import kotlin.collections.ArraysKt;
@@ -218,14 +219,14 @@ public final class Conversions {
 
             CodeType value = ((CodeType) methodRef.getValues().get("value"));
             String name = (String) methodRef.getValues().get("name");
-            CodeType returnType = notNull(((CodeType) methodRef.getValues().get("returnType")), Types.VOID);
+            CodeType returnType = notNull(((CodeType) methodRef.getValues().get("returnType")), Types.VOID, "'returnType' property not set");
             Object pTypes = methodRef.getValues().get("parameterTypes");
 
             if(pTypes != null) {
                 pTypes = ArrayToList.toList(ArrayUtils.toObjectArray(pTypes));
             }
 
-            List<? extends CodeType> parameterTypes = notNull(((List<? extends CodeType>) pTypes), Collections.emptyList());
+            List<? extends CodeType> parameterTypes = notNull(((List<? extends CodeType>) pTypes), Collections.emptyList(), "'parameterTypes' property not set");
 
             return Optional.of(new MethodTypeSpec(value, name, new TypeSpec(returnType, parameterTypes)));
         }
@@ -249,7 +250,8 @@ public final class Conversions {
 
             CodeType value = ((CodeType) methodRef.getValues().get("value"));
             String name = (String) methodRef.getValues().get("name");
-            CodeType returnType = notNull(((CodeType) methodRef.getValues().get("returnType")), rtype);
+            CodeType returnType = notNull(((CodeType) methodRef.getValues().get("returnType")),
+                    rtype, "'returnType' property not set");
 
             Object pTypes = methodRef.getValues().get("parameterTypes");
 
@@ -257,17 +259,21 @@ public final class Conversions {
                 pTypes = ArrayToList.toList(ArrayUtils.toObjectArray(pTypes));
             }
 
-            List<? extends CodeType> parameterTypes = notNull(((List<? extends CodeType>) pTypes), Arrays.asList(ptypes));
+            List<? extends CodeType> parameterTypes = notNull(((List<? extends CodeType>) pTypes),
+                    ptypes == null ? null : Arrays.asList(ptypes), "'parameterTypes' property not set");
 
-            if (parameterTypes.size() > 0)
-                Conditions.require(ptypes.length == parameterTypes.size(), "'methodRef.parameterTypes().length' must be equal to 'ptypes.length'!");
+            if (parameterTypes.size() > 0) {
+                if(ptypes != null && ptypes.length != parameterTypes.size())
+                    return Optional.empty();
+                /*Conditions.require(ptypes.length == parameterTypes.size(), "'methodRef.parameterTypes().length' must be equal to 'ptypes.length'!");*/
+            }
 
             return Optional.of(new MethodTypeSpec(value, name,
                     new TypeSpec(
                             Conversions.CAPI.typeOr(returnType, rtype),
-                            ptypes.length > 0 && parameterTypes.size() == 0
+                            ptypes != null && ptypes.length > 0 && parameterTypes.size() == 0
                                     ? Arrays.asList(ptypes)
-                                    : CollectionsKt.mapIndexed(parameterTypes, (integer, aClass) -> typeOr(aClass, ptypes[integer]))
+                                    : CollectionsKt.mapIndexed(parameterTypes, (integer, aClass) -> typeOr(aClass, ptypes == null ? null : ptypes[integer]))
                     )
             ));
         }
@@ -301,14 +307,14 @@ public final class Conversions {
          * type}.
          */
         private static CodeType typeOr(CodeType type, CodeType alternative) {
-            return (!type.is(CodeAPI.getJavaType(Default.class)) ? type : alternative);
+            return (!type.is(CodeAPI.getJavaType(Default.class)) ? type : Objects.requireNonNull(alternative));
         }
 
         @Contract(pure = true)
         @NotNull
-        private static <T> T notNull(@Nullable T input, @NotNull T other) {
+        private static <T> T notNull(@Nullable T input, @Nullable T other, String message) {
             if(input == null)
-                return other;
+                return Objects.requireNonNull(other, message);
 
             return input;
         }
