@@ -53,7 +53,7 @@ public interface Person {
 
     interface Builder<T extends Person, S extends Builder<T, S>> extends com.github.jonathanxd.buildergenerator.Builder<T, S> {
 
-        @DefaultImpl(value = @MethodRef(value = DefaultImpls.class, name = "withName"))
+        @DefaultImpl(value = @MethodRef(value = DefaultImpls.class, name = "withName", parameterTypes = {Builder.class, Object.class}))
         S withName(Object o);
 
         S withName(String name);

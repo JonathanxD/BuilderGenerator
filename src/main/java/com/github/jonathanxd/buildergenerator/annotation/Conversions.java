@@ -33,6 +33,8 @@ import com.github.jonathanxd.codeapi.base.Annotation;
 import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
 import com.github.jonathanxd.codeapi.common.TypeSpec;
 import com.github.jonathanxd.codeapi.type.CodeType;
+import com.github.jonathanxd.codeapi.util.ArrayToList;
+import com.github.jonathanxd.iutils.array.ArrayUtils;
 import com.github.jonathanxd.iutils.condition.Conditions;
 
 import org.jetbrains.annotations.Contract;
@@ -217,7 +219,13 @@ public final class Conversions {
             CodeType value = ((CodeType) methodRef.getValues().get("value"));
             String name = (String) methodRef.getValues().get("name");
             CodeType returnType = notNull(((CodeType) methodRef.getValues().get("returnType")), Types.VOID);
-            List<? extends CodeType> parameterTypes = notNull(((List<? extends CodeType>) methodRef.getValues().get("parameterTypes")), Collections.emptyList());
+            Object pTypes = methodRef.getValues().get("parameterTypes");
+
+            if(pTypes != null) {
+                pTypes = ArrayToList.toList(ArrayUtils.toObjectArray(pTypes));
+            }
+
+            List<? extends CodeType> parameterTypes = notNull(((List<? extends CodeType>) pTypes), Collections.emptyList());
 
             return Optional.of(new MethodTypeSpec(value, name, new TypeSpec(returnType, parameterTypes)));
         }
@@ -242,7 +250,14 @@ public final class Conversions {
             CodeType value = ((CodeType) methodRef.getValues().get("value"));
             String name = (String) methodRef.getValues().get("name");
             CodeType returnType = notNull(((CodeType) methodRef.getValues().get("returnType")), rtype);
-            List<? extends CodeType> parameterTypes = notNull(((List<? extends CodeType>) methodRef.getValues().get("parameterTypes")), Arrays.asList(ptypes));
+
+            Object pTypes = methodRef.getValues().get("parameterTypes");
+
+            if(pTypes != null) {
+                pTypes = ArrayToList.toList(ArrayUtils.toObjectArray(pTypes));
+            }
+
+            List<? extends CodeType> parameterTypes = notNull(((List<? extends CodeType>) pTypes), Arrays.asList(ptypes));
 
             if (parameterTypes.size() > 0)
                 Conditions.require(ptypes.length == parameterTypes.size(), "'methodRef.parameterTypes().length' must be equal to 'ptypes.length'!");

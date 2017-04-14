@@ -6,7 +6,7 @@ plugins {
 }
 
 group 'com.github.jonathanxd'
-version '1.0.16a'
+version '1.0.17'
 
 apply plugin: 'idea'
 apply plugin: 'java'
