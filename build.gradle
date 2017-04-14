@@ -79,21 +79,23 @@ task apOnlyJar(type: ShadowJar, dependsOn: classes) {
 }
 
 shadowJar { // Relocate
-    relocate 'com.github.jonathanxd.codeapi', 'com.github.jonathanxd.buidergenerator.codeapi'
-    relocate 'org.objectweb.asm', 'com.github.jonathanxd.buidergenerator.asm'
-    relocate 'com.google', 'com.github.jonathanxd.buidergenerator.com.google'
-    relocate 'org.jetbrains', 'com.github.jonathanxd.buidergenerator.org.jetbrains'
-    relocate 'org.intellij', 'com.github.jonathanxd.buidergenerator.org.intellij'
-    relocate 'kotlin', 'com.github.jonathanxd.buidergenerator.kotlin'
+    relocate 'com.github.jonathanxd.codeapi', 'com.github.jonathanxd.buildergenerator.codeapi'
+    relocate 'com.github.jonathanxd.iutils', 'com.github.jonathanxd.buildergenerator.iutils'
+    relocate 'org.objectweb.asm', 'com.github.jonathanxd.buildergenerator.asm'
+    relocate 'com.google', 'com.github.jonathanxd.buildergenerator.com.google'
+    relocate 'org.jetbrains', 'com.github.jonathanxd.buildergenerator.org.jetbrains'
+    relocate 'org.intellij', 'com.github.jonathanxd.buildergenerator.org.intellij'
+    relocate 'kotlin', 'com.github.jonathanxd.buildergenerator.kotlin'
 }
 
 apOnlyJar {
-    relocate 'com.github.jonathanxd.codeapi', 'com.github.jonathanxd.buidergenerator.codeapi'
-    relocate 'org.objectweb.asm', 'com.github.jonathanxd.buidergenerator.asm'
-    relocate 'com.google', 'com.github.jonathanxd.buidergenerator.com.google'
-    relocate 'org.jetbrains', 'com.github.jonathanxd.buidergenerator.org.jetbrains'
-    relocate 'org.intellij', 'com.github.jonathanxd.buidergenerator.org.intellij'
-    relocate 'kotlin', 'com.github.jonathanxd.buidergenerator.kotlin'
+    relocate 'com.github.jonathanxd.codeapi', 'com.github.jonathanxd.buildergenerator.codeapi'
+    relocate 'com.github.jonathanxd.iutils', 'com.github.jonathanxd.buildergenerator.iutils'
+    relocate 'org.objectweb.asm', 'com.github.jonathanxd.buildergenerator.asm'
+    relocate 'com.google', 'com.github.jonathanxd.buildergenerator.com.google'
+    relocate 'org.jetbrains', 'com.github.jonathanxd.buildergenerator.org.jetbrains'
+    relocate 'org.intellij', 'com.github.jonathanxd.buildergenerator.org.intellij'
+    relocate 'kotlin', 'com.github.jonathanxd.buildergenerator.kotlin'
 }
 
 artifacts {
