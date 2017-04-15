@@ -40,6 +40,12 @@ public final class Options {
      */
     private static boolean DISABLE_STRICT_SETTER_CHECK;
 
+    /**
+     * Throw exceptions instead of only logging them.
+     */
+    private static boolean THROW_EXCEPTIONS;
+
+
     private Options() {
     }
 
@@ -50,10 +56,16 @@ public final class Options {
         return Options.DISABLE_STRICT_SETTER_CHECK;
     }
 
+    public static boolean isThrowExceptions() {
+        return Options.THROW_EXCEPTIONS;
+    }
 
     public static void load(Map<String, String> options) {
         Options.DISABLE_STRICT_SETTER_CHECK =
                 Boolean.valueOf(options.getOrDefault(PATH + ".disableStrictSetterCheck", "false"));
+
+        Options.THROW_EXCEPTIONS =
+                Boolean.valueOf(options.getOrDefault(PATH + ".throwExceptions", "false"));
     }
 
 }

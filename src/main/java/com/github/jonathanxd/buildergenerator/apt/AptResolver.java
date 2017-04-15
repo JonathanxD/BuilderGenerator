@@ -28,6 +28,7 @@
 package com.github.jonathanxd.buildergenerator.apt;
 
 import com.github.jonathanxd.buildergenerator.annotation.Conversions;
+import com.github.jonathanxd.buildergenerator.unification.UnifiedMethodRef;
 import com.github.jonathanxd.buildergenerator.util.TypeElementUtil;
 import com.github.jonathanxd.codeapi.Types;
 import com.github.jonathanxd.codeapi.base.Annotation;
@@ -54,7 +55,7 @@ public class AptResolver {
     /**
      * Resolves the method reference.
      *
-     * @param methodRefAnnotation {@link com.github.jonathanxd.buildergenerator.annotation.MethodRef}
+     * @param unifiedMethodRef {@link com.github.jonathanxd.buildergenerator.annotation.MethodRef}
      *                            annotation.
      * @param rtype               Inferred return type (if annotation property is defined, this
      *                            value will be ignored).
@@ -67,9 +68,9 @@ public class AptResolver {
      * @see Conversions.CAPI#toMethodSpec(Annotation, CodeType, CodeType[])
      */
     @Nullable
-    public static Pair<MethodTypeSpec, ExecutableElement> resolveMethodRef(Annotation methodRefAnnotation, CodeType rtype, CodeType[] ptypes, Elements elements) {
+    public static Pair<MethodTypeSpec, ExecutableElement> resolveMethodRef(UnifiedMethodRef unifiedMethodRef, CodeType rtype, CodeType[] ptypes, Elements elements) {
 
-        Optional<MethodTypeSpec> methodTypeSpec = Conversions.CAPI.toMethodSpec(methodRefAnnotation, rtype, ptypes);
+        Optional<MethodTypeSpec> methodTypeSpec = Conversions.CAPI.toMethodSpec(unifiedMethodRef, rtype, ptypes);
 
         if (methodTypeSpec.isPresent()) {
             MethodTypeSpec spec = methodTypeSpec.get();

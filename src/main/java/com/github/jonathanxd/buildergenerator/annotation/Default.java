@@ -27,13 +27,33 @@
  */
 package com.github.jonathanxd.buildergenerator.annotation;
 
+import com.github.jonathanxd.buildergenerator.unification.UnifiedDefaultImpl;
+import com.github.jonathanxd.buildergenerator.unification.UnifiedMethodRef;
+import com.github.jonathanxd.buildergenerator.unification.UnifiedValidator;
 import com.github.jonathanxd.codeapi.CodeAPI;
 import com.github.jonathanxd.codeapi.base.Annotation;
 import com.github.jonathanxd.codeapi.type.CodeType;
 
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Optional;
+
 public final class Default {
+    private static final CodeType DEFAULT = CodeAPI.getJavaType(Default.class);
+
     private Default() {
         throw new IllegalStateException();
+    }
+
+
+    /**
+     * Returns true if {@code codeType} is default.
+     *
+     * @param codeType Type.
+     * @return True if {@code codeType} is default.
+     */
+    public static boolean isDefaultType(CodeType codeType) {
+        return codeType.is(Default.DEFAULT);
     }
 
     /**
@@ -67,6 +87,16 @@ public final class Default {
     }
 
     /**
+     * Returns true if {@code methodRef} annotation is default.
+     *
+     * @param methodRef Method reference.
+     * @return True if {@code methodRef} annotation is default.
+     */
+    public static boolean isDefaultMethodRef(UnifiedMethodRef methodRef) {
+        return methodRef.value().is(CodeAPI.getJavaType(Default.class));
+    }
+
+    /**
      * Returns true if {@code defaultImpl} annotation is default.
      *
      * @param defaultImpl Default impl annotation.
@@ -74,6 +104,16 @@ public final class Default {
      */
     public static boolean isDefaultDefaultImpl(Annotation defaultImpl) {
         return isDefaultMethodRef(((Annotation) defaultImpl.getValues().get("value")));
+    }
+
+    /**
+     * Returns true if {@code defaultImpl} annotation is default.
+     *
+     * @param defaultImpl Default impl annotation.
+     * @return True if {@code defaultImpl} annotation is default.
+     */
+    public static boolean isDefaultDefaultImpl(UnifiedDefaultImpl defaultImpl) {
+        return isDefaultMethodRef(defaultImpl.value());
     }
 
     /**
@@ -86,4 +126,28 @@ public final class Default {
         return isDefaultMethodRef(((Annotation) validator.getValues().get("value")));
     }
 
+    /**
+     * Returns true if {@code validator} annotation is default.
+     *
+     * @param validator Validator
+     * @return True if {@code validator} annotation is default.
+     */
+    public static boolean isDefaultValidator(UnifiedValidator validator) {
+        return isDefaultMethodRef(validator.value());
+    }
+
+    public static Optional<UnifiedMethodRef> methodRefOptional(@NotNull UnifiedMethodRef unifiedMethodRef) {
+        if(isDefaultMethodRef(unifiedMethodRef))
+            return Optional.empty();
+
+        return Optional.of(unifiedMethodRef);
+    }
+
+    public static Optional<String> stringOptional(@NotNull String s) {
+
+        if(s.isEmpty())
+            return Optional.empty();
+
+        return Optional.of(s);
+    }
 }

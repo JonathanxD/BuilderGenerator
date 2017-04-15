@@ -32,11 +32,13 @@ import com.github.jonathanxd.buildergenerator.annotation.PropertyInfo;
 import com.github.jonathanxd.buildergenerator.spec.MethodRefSpec;
 import com.github.jonathanxd.buildergenerator.spec.MethodSpec;
 import com.github.jonathanxd.buildergenerator.spec.PropertySpec;
+import com.github.jonathanxd.codeapi.CodeAPI;
 import com.github.jonathanxd.codeapi.CodePart;
 import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
 import com.github.jonathanxd.codeapi.type.CodeType;
 import com.github.jonathanxd.codeapi.type.LoadedCodeType;
 import com.github.jonathanxd.codeapi.util.CodeTypes;
+import com.github.jonathanxd.iutils.type.TypeInfo;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -164,8 +166,13 @@ public final class MethodResolver {
 
         codeType = CodeTypes.getConcreteType(codeType);
 
-        if (!(codeType instanceof LoadedCodeType<?>))
-            return null;
+        if (!(codeType instanceof LoadedCodeType<?>)) {
+            try {
+                codeType = CodeAPI.getJavaType(TypeInfo.resolveClass(codeType.getCanonicalName()));
+            }catch (Throwable ignored) {
+                return null;
+            }
+        }
 
         return ((LoadedCodeType<?>) codeType).getLoadedType();
     }

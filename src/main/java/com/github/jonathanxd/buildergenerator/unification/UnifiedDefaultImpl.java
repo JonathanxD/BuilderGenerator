@@ -25,38 +25,25 @@
  *      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *      THE SOFTWARE.
  */
-package com.github.jonathanxd.buildergenerator.test;
+package com.github.jonathanxd.buildergenerator.unification;
 
-import com.google.common.truth.FailureStrategy;
-import com.google.testing.compile.JavaFileObjects;
-import com.google.testing.compile.JavaSourcesSubjectFactory;
+import com.github.jonathanxd.codeapi.extra.UnifiedAnnotation;
 
-import com.github.jonathanxd.buildergenerator.apt.AnnotationProcessor;
-import com.github.jonathanxd.iutils.collection.CollectionUtils;
+/**
+ * Default method marker. Some JVM Languages does not compile interface methods with default
+ * implementations to Java 8 {@code default} methods. This annotation marks the method as default
+ * method and provide the target method to invoke. The method may be static and have a receiver
+ * parameter and a value parameter and return type of the same type of the annotated method, to
+ * invoke local methods (instance methods) add {@code :} to the start of method name, example:
+ * {@code :fooBar}.
+ */
+public interface UnifiedDefaultImpl extends UnifiedAnnotation {
 
-import org.junit.Test;
-
-import javax.tools.JavaFileObject;
-
-public class SimpleTest {
-
-    public static final JavaFileObject INTERFACE = JavaFileObjects.forResource("Person.java");
-
-    public static final JavaFileObject IMPL = JavaFileObjects.forResource("PersonImpl.java");
-
-    @Test
-    public void test() {
-        JavaSourcesSubjectFactory.javaSources()
-                .getSubject(new Fail(),
-                        CollectionUtils.listOf(INTERFACE, IMPL))
-                .withCompilerOptions("-Ajonathanxd.buildergenerator.throwExceptions=true")
-                .processedWith(new AnnotationProcessor())
-                .compilesWithoutError();
-
-    }
-
-
-    public static class Fail extends FailureStrategy {
-    }
+    /**
+     * Target method to invoke.
+     *
+     * @return Target method to invoke.
+     */
+    UnifiedMethodRef value();
 
 }

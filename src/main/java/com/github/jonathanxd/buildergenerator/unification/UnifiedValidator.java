@@ -25,38 +25,30 @@
  *      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *      THE SOFTWARE.
  */
-package com.github.jonathanxd.buildergenerator.test;
+package com.github.jonathanxd.buildergenerator.unification;
 
-import com.google.common.truth.FailureStrategy;
-import com.google.testing.compile.JavaFileObjects;
-import com.google.testing.compile.JavaSourcesSubjectFactory;
+import com.github.jonathanxd.buildergenerator.annotation.Inline;
+import com.github.jonathanxd.codeapi.extra.UnifiedAnnotation;
 
-import com.github.jonathanxd.buildergenerator.apt.AnnotationProcessor;
-import com.github.jonathanxd.iutils.collection.CollectionUtils;
+/**
+ * Specify the validator method. Validator method normally throws {@link IllegalArgumentException}
+ * or {@link IllegalStateException} when the input value is invalid.
+ *
+ * The validator method must be static, return {@code void} and receive a parameter of the same type
+ * as {@code property type} or a {@code super type} of property type, a parameter of type {@link
+ * String} to receive {@code property name} and a parameter of type {@link Class} to receive {@code
+ * property type}. These rules only applies to non-inline validators. Validators annotated with
+ * {@link Inline} has different rules, the rules depends on the implementation of the {@link
+ * com.github.jonathanxd.buildergenerator.BuilderGenerator}. {@link Inline} documentation explain
+ * these rules.
+ */
+public interface UnifiedValidator extends UnifiedAnnotation {
 
-import org.junit.Test;
-
-import javax.tools.JavaFileObject;
-
-public class SimpleTest {
-
-    public static final JavaFileObject INTERFACE = JavaFileObjects.forResource("Person.java");
-
-    public static final JavaFileObject IMPL = JavaFileObjects.forResource("PersonImpl.java");
-
-    @Test
-    public void test() {
-        JavaSourcesSubjectFactory.javaSources()
-                .getSubject(new Fail(),
-                        CollectionUtils.listOf(INTERFACE, IMPL))
-                .withCompilerOptions("-Ajonathanxd.buildergenerator.throwExceptions=true")
-                .processedWith(new AnnotationProcessor())
-                .compilesWithoutError();
-
-    }
-
-
-    public static class Fail extends FailureStrategy {
-    }
+    /**
+     * Method reference.
+     *
+     * @return Method reference.
+     */
+    UnifiedMethodRef value();
 
 }

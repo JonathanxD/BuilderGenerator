@@ -25,38 +25,45 @@
  *      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *      THE SOFTWARE.
  */
-package com.github.jonathanxd.buildergenerator.test;
+package com.github.jonathanxd.buildergenerator.unification;
 
-import com.google.common.truth.FailureStrategy;
-import com.google.testing.compile.JavaFileObjects;
-import com.google.testing.compile.JavaSourcesSubjectFactory;
+import com.github.jonathanxd.codeapi.extra.UnifiedAnnotation;
+import com.github.jonathanxd.codeapi.type.CodeType;
 
-import com.github.jonathanxd.buildergenerator.apt.AnnotationProcessor;
-import com.github.jonathanxd.iutils.collection.CollectionUtils;
+/**
+ * Reference to a method, at compile-time, if the method doesn't exists, the compilation will fail
+ * with an error.
+ *
+ * @see com.github.jonathanxd.buildergenerator.apt.MethodRefValidator
+ */
+public interface UnifiedMethodRef extends UnifiedAnnotation {
 
-import org.junit.Test;
+    /**
+     * Method class.
+     *
+     * @return Method class.
+     */
+    CodeType value();
 
-import javax.tools.JavaFileObject;
+    /**
+     * Method return type.
+     *
+     * @return Method return type.
+     */
+    CodeType returnType();
 
-public class SimpleTest {
+    /**
+     * Method parameter types.
+     *
+     * @return Method parameter types.
+     */
+    CodeType[] parameterTypes();
 
-    public static final JavaFileObject INTERFACE = JavaFileObjects.forResource("Person.java");
-
-    public static final JavaFileObject IMPL = JavaFileObjects.forResource("PersonImpl.java");
-
-    @Test
-    public void test() {
-        JavaSourcesSubjectFactory.javaSources()
-                .getSubject(new Fail(),
-                        CollectionUtils.listOf(INTERFACE, IMPL))
-                .withCompilerOptions("-Ajonathanxd.buildergenerator.throwExceptions=true")
-                .processedWith(new AnnotationProcessor())
-                .compilesWithoutError();
-
-    }
-
-
-    public static class Fail extends FailureStrategy {
-    }
+    /**
+     * Name of the method.
+     *
+     * @return Name of the method.
+     */
+    String name();
 
 }

@@ -27,6 +27,9 @@
  */
 package com.github.jonathanxd.buildergenerator.annotation;
 
+import com.github.jonathanxd.buildergenerator.unification.UnifiedDefaultImpl;
+import com.github.jonathanxd.buildergenerator.unification.UnifiedMethodRef;
+import com.github.jonathanxd.buildergenerator.unification.UnifiedValidator;
 import com.github.jonathanxd.codeapi.CodeAPI;
 import com.github.jonathanxd.codeapi.Types;
 import com.github.jonathanxd.codeapi.base.Annotation;
@@ -176,11 +179,11 @@ public final class Conversions {
          * if the {@code validator} {@link Default#isDefault(Validator)} or the {@link
          * Validator#value()} is {@link Default#isDefault(MethodRef)}.
          */
-        public static Optional<MethodTypeSpec> validatorToMethodSpec(Annotation validator) {
+        public static Optional<MethodTypeSpec> validatorToMethodSpec(UnifiedValidator validator) {
             if (validator == null || Default.isDefaultValidator(validator))
                 return Optional.empty();
 
-            return Conversions.CAPI.toMethodSpec((Annotation) validator.getValues().get("value"));
+            return Conversions.CAPI.toMethodSpec(validator.value());
         }
 
         /**
@@ -196,11 +199,11 @@ public final class Conversions {
          * if the {@code validator} {@link Default#isDefault(Validator)} or the {@link
          * Validator#value()} is {@link Default#isDefault(MethodRef)}.
          */
-        public static Optional<MethodTypeSpec> validatorToMethodSpec(Annotation validator, CodeType rtype, CodeType[] ptypes) {
+        public static Optional<MethodTypeSpec> validatorToMethodSpec(UnifiedValidator validator, CodeType rtype, CodeType[] ptypes) {
             if (validator == null || Default.isDefaultValidator(validator))
                 return Optional.empty();
 
-            return Conversions.CAPI.toMethodSpec((Annotation) validator.getValues().get("value"), rtype, ptypes);
+            return Conversions.CAPI.toMethodSpec(validator.value(), rtype, ptypes);
         }
 
         /**
@@ -213,20 +216,14 @@ public final class Conversions {
          * @see #toMethodSpec(MethodRef)
          */
         @SuppressWarnings("unchecked")
-        public static Optional<MethodTypeSpec> toMethodSpec(Annotation methodRef) {
+        public static Optional<MethodTypeSpec> toMethodSpec(UnifiedMethodRef methodRef) {
             if (methodRef == null || Default.isDefaultMethodRef(methodRef))
                 return Optional.empty();
 
-            CodeType value = ((CodeType) methodRef.getValues().get("value"));
-            String name = (String) methodRef.getValues().get("name");
-            CodeType returnType = notNull(((CodeType) methodRef.getValues().get("returnType")), Types.VOID, "'returnType' property not set");
-            Object pTypes = methodRef.getValues().get("parameterTypes");
-
-            if(pTypes != null) {
-                pTypes = ArrayToList.toList(ArrayUtils.toObjectArray(pTypes));
-            }
-
-            List<? extends CodeType> parameterTypes = notNull(((List<? extends CodeType>) pTypes), Collections.emptyList(), "'parameterTypes' property not set");
+            CodeType value = methodRef.value();
+            String name = methodRef.name();
+            CodeType returnType = notNull(methodRef.returnType(), Types.VOID, "'returnType' property not set");
+            List<? extends CodeType> parameterTypes = notNull(getTypes(methodRef.parameterTypes()), Collections.emptyList(), "'parameterTypes' property not set");
 
             return Optional.of(new MethodTypeSpec(value, name, new TypeSpec(returnType, parameterTypes)));
         }
@@ -243,23 +240,16 @@ public final class Conversions {
          * @see #toMethodSpec(MethodRef, Class, Class[])
          */
         @SuppressWarnings("unchecked")
-        public static Optional<MethodTypeSpec> toMethodSpec(Annotation methodRef, CodeType rtype, CodeType[] ptypes) {
+        public static Optional<MethodTypeSpec> toMethodSpec(UnifiedMethodRef methodRef, CodeType rtype, CodeType[] ptypes) {
 
             if (methodRef == null || Default.isDefaultMethodRef(methodRef))
                 return Optional.empty();
 
-            CodeType value = ((CodeType) methodRef.getValues().get("value"));
-            String name = (String) methodRef.getValues().get("name");
-            CodeType returnType = notNull(((CodeType) methodRef.getValues().get("returnType")),
-                    rtype, "'returnType' property not set");
+            CodeType value = methodRef.value();
+            String name = methodRef.name();
+            CodeType returnType = notNull(methodRef.returnType(), rtype, "'returnType' property not set");
 
-            Object pTypes = methodRef.getValues().get("parameterTypes");
-
-            if(pTypes != null) {
-                pTypes = ArrayToList.toList(ArrayUtils.toObjectArray(pTypes));
-            }
-
-            List<? extends CodeType> parameterTypes = notNull(((List<? extends CodeType>) pTypes),
+            List<? extends CodeType> parameterTypes = notNull(getTypes(methodRef.parameterTypes()),
                     ptypes == null ? null : Arrays.asList(ptypes), "'parameterTypes' property not set");
 
             if (parameterTypes.size() > 0) {
@@ -289,12 +279,12 @@ public final class Conversions {
          * @see #toMethodSpec(DefaultImpl, Class, Class[])
          */
         @SuppressWarnings("unchecked")
-        public static Optional<MethodTypeSpec> defaultImplToMethodSpec(Annotation defaultImpl, CodeType rtype, CodeType[] ptypes) {
+        public static Optional<MethodTypeSpec> defaultImplToMethodSpec(UnifiedDefaultImpl defaultImpl, CodeType rtype, CodeType[] ptypes) {
 
             if (defaultImpl == null || Default.isDefaultDefaultImpl(defaultImpl))
                 return Optional.empty();
 
-            return Conversions.CAPI.toMethodSpec((Annotation) defaultImpl.getValues().get("value"), rtype, ptypes);
+            return Conversions.CAPI.toMethodSpec(defaultImpl.value(), rtype, ptypes);
         }
 
         /**
@@ -310,10 +300,17 @@ public final class Conversions {
             return (!type.is(CodeAPI.getJavaType(Default.class)) ? type : Objects.requireNonNull(alternative));
         }
 
+        private static List<? extends CodeType> getTypes(CodeType[] types) {
+            if(types.length == 0)
+                return null;
+
+            return ArrayToList.toList(types);
+        }
+
         @Contract(pure = true)
         @NotNull
         private static <T> T notNull(@Nullable T input, @Nullable T other, String message) {
-            if(input == null)
+            if(input == null || (input instanceof CodeType && ((CodeType) input).is(CodeAPI.getJavaType(Default.class))))
                 return Objects.requireNonNull(other, message);
 
             return input;

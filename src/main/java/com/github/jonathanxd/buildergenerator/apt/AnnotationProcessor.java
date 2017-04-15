@@ -28,6 +28,7 @@
 package com.github.jonathanxd.buildergenerator.apt;
 
 import com.github.jonathanxd.buildergenerator.CodeAPIBuilderGenerator;
+import com.github.jonathanxd.buildergenerator.annotation.Default;
 import com.github.jonathanxd.buildergenerator.annotation.DefaultImpl;
 import com.github.jonathanxd.buildergenerator.annotation.GenBuilder;
 import com.github.jonathanxd.buildergenerator.annotation.PropertyInfo;
@@ -35,17 +36,22 @@ import com.github.jonathanxd.buildergenerator.spec.BuilderSpec;
 import com.github.jonathanxd.buildergenerator.spec.MethodRefSpec;
 import com.github.jonathanxd.buildergenerator.spec.MethodSpec;
 import com.github.jonathanxd.buildergenerator.spec.PropertySpec;
+import com.github.jonathanxd.buildergenerator.unification.UnificationFactory;
+import com.github.jonathanxd.buildergenerator.unification.UnifiedDefaultImpl;
+import com.github.jonathanxd.buildergenerator.unification.UnifiedGenBuilder;
+import com.github.jonathanxd.buildergenerator.unification.UnifiedMethodRef;
+import com.github.jonathanxd.buildergenerator.unification.UnifiedPropertyInfo;
+import com.github.jonathanxd.buildergenerator.unification.UnifiedValidator;
 import com.github.jonathanxd.buildergenerator.util.AnnotatedConstructUtil;
-import com.github.jonathanxd.buildergenerator.util.AnnotationMirrorUtil;
 import com.github.jonathanxd.buildergenerator.util.ExecutableElementsUtil;
 import com.github.jonathanxd.buildergenerator.util.FilerUtil;
 import com.github.jonathanxd.buildergenerator.util.TypeElementUtil;
-import com.github.jonathanxd.codeapi.base.Annotation;
 import com.github.jonathanxd.codeapi.base.MethodDeclaration;
 import com.github.jonathanxd.codeapi.base.TypeDeclaration;
 import com.github.jonathanxd.codeapi.builder.MethodDeclarationBuilder;
 import com.github.jonathanxd.codeapi.common.CodeModifier;
 import com.github.jonathanxd.codeapi.common.CodeParameter;
+import com.github.jonathanxd.codeapi.extra.AnnotationsKt;
 import com.github.jonathanxd.codeapi.keyword.Keyword;
 import com.github.jonathanxd.codeapi.keyword.Keywords;
 import com.github.jonathanxd.codeapi.type.CodeType;
@@ -53,7 +59,6 @@ import com.github.jonathanxd.codeapi.type.GenericType;
 import com.github.jonathanxd.codeapi.util.Identity;
 import com.github.jonathanxd.codeapi.util.ModelCodeTypesKt;
 import com.github.jonathanxd.iutils.collection.CollectionUtils;
-import com.github.jonathanxd.iutils.container.primitivecontainers.BooleanContainer;
 import com.github.jonathanxd.iutils.object.Pair;
 
 import java.io.IOException;
@@ -62,7 +67,6 @@ import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -76,14 +80,12 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
@@ -124,14 +126,11 @@ public class AnnotationProcessor extends AbstractProcessor {
                 if (element.getKind() == ElementKind.METHOD) {
                     ExecutableElement executableElement = (ExecutableElement) element;
 
+                    UnifiedDefaultImpl annotation = AnnotatedConstructUtil
+                            .getUnifiedAnnotation(executableElement, DEFAULT_IMPL_ANNOTATION_CLASS, UnifiedDefaultImpl.class)
+                            .orElseThrow(() -> new IllegalStateException("Cannot find @DefaultImpl annotation"));
 
-                    Optional<AnnotationMirror> propertyInfoAnnotation = AnnotatedConstructUtil.getAnnotationMirror(executableElement, DEFAULT_IMPL_ANNOTATION_CLASS);
-
-                    AnnotationMirror annotationMirror = propertyInfoAnnotation.orElseThrow(() -> new IllegalStateException("Cannot find @DefaultImpl annotation"));
-
-                    Annotation annotation = (Annotation) AnnotationMirrorUtil.toCodeAPI(annotationMirror, this.processingEnvironment.getElementUtils());
-
-                    if (!MethodRefValidator.validate(executableElement, annotationMirror, (Annotation) annotation.getValues().get("value"), this.getMessager(), this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.DEFAULT_IMPL)) {
+                    if (!MethodRefValidator.validate(executableElement, annotation.value(), this.getMessager(), this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.DEFAULT_IMPL)) {
                         return false;
                     }
 
@@ -149,7 +148,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                 if (element.getKind() == ElementKind.METHOD) {
                     ExecutableElement executableElement = (ExecutableElement) element;
 
-                    if(AnnotatedConstructUtil.getAnnotationMirror(executableElement, DEFAULT_IMPL_ANNOTATION_CLASS).isPresent()) {
+                    if (AnnotatedConstructUtil.getUnifiedAnnotation(executableElement, DEFAULT_IMPL_ANNOTATION_CLASS, UnifiedDefaultImpl.class).isPresent()) {
                         this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Methods annotated with @DefaultImpl are not eligible to be a property, remove @PropertyInfo or @DefaultImpl annotation.", executableElement);
                         return false;
                     }
@@ -161,48 +160,27 @@ public class AnnotationProcessor extends AbstractProcessor {
                         return false;
                     }
 
-                    Optional<AnnotationMirror> propertyInfoAnnotation = AnnotatedConstructUtil.getAnnotationMirror(executableElement, PROPERTY_INFO_ANNOTATION_CLASS);
+                    UnifiedPropertyInfo unifiedPropertyInfo =
+                            AnnotatedConstructUtil.getUnifiedAnnotation(executableElement, PROPERTY_INFO_ANNOTATION_CLASS, UnifiedPropertyInfo.class)
+                                    .orElseThrow(() -> new IllegalStateException("Cannot find @PropertyInfo annotation"));
 
-                    AnnotationMirror propertyInfoMirror = propertyInfoAnnotation.orElseThrow(() -> new IllegalStateException("Cannot find @PropertyInfo annotation"));
+                    UnifiedMethodRef defaultValue = unifiedPropertyInfo.defaultValue();
 
-                    Annotation annotation = (Annotation) AnnotationMirrorUtil.toCodeAPI(propertyInfoMirror, this.processingEnvironment.getElementUtils());
+                    if (!Default.isDefaultMethodRef(defaultValue)) {
 
-                    CodeType propertyType = TypeElementUtil.toCodeType(parameters.get(0).asType(), this.processingEnvironment.getElementUtils());
-
-                    Object defaultValue = annotation.getValues().get("defaultValue");
-
-                    if (defaultValue != null) {
-
-                        if (!(defaultValue instanceof Annotation)) {
-                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Invalid input type for 'defaultValue' value in @PropertyInfo annotation: 'defaultValue' must be a @MethodRef instance.", executableElement, propertyInfoMirror);
-                            return false;
-                        }
-
-                        if (!MethodRefValidator.validate(executableElement, propertyInfoMirror, (Annotation) defaultValue, this.getMessager(), this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.DEFAULT_VALUE)) {
+                        if (!MethodRefValidator.validate(executableElement, defaultValue, this.getMessager(), this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.DEFAULT_VALUE)) {
                             return false;
                         }
                     }
 
-                    Object validator = annotation.getValues().get("validator");
+                    UnifiedValidator unifiedValidator = unifiedPropertyInfo.validator();
 
-                    if (validator != null) {
+                    if (!Default.isDefaultValidator(unifiedValidator)) {
 
-                        if (!(validator instanceof Annotation)) {
-                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Invalid input type for 'validator' value in @PropertyInfo annotation: 'defaultValue' must be a @Validator instance.", executableElement, propertyInfoMirror);
-                            return false;
-                        }
+                        UnifiedMethodRef methodRef = unifiedValidator.value();
 
-                        Annotation validatorAnnotation = (Annotation) validator;
-
-                        Object value = validatorAnnotation.getValues().get("value");
-
-                        if (value != null) {
-                            if (!(value instanceof Annotation)) {
-                                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Invalid input type for 'value' value in @Validator annotation: 'value' must be a @MethodRef instance.", executableElement, propertyInfoMirror);
-                                return false;
-                            }
-
-                            if (!MethodRefValidator.validate(executableElement, propertyInfoMirror, (Annotation) value, this.getMessager(), this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.VALIDATOR)) {
+                        if (!Default.isDefaultMethodRef(methodRef)) {
+                            if (!MethodRefValidator.validate(executableElement, methodRef, this.getMessager(), this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.VALIDATOR)) {
                                 return false;
                             }
                         }
@@ -286,53 +264,16 @@ public class AnnotationProcessor extends AbstractProcessor {
                         factoryMethodName = executableElement.getSimpleName().toString();
                     }
 
-                    Optional<AnnotationMirror> mirrorOptional = AnnotatedConstructUtil.getAnnotationMirror(annotatedElement, BUILDER_GEN_ANNOTATION_CLASS);
+                    Optional<UnifiedGenBuilder> mirrorOptional = AnnotatedConstructUtil.getUnifiedAnnotation(annotatedElement, BUILDER_GEN_ANNOTATION_CLASS, UnifiedGenBuilder.class);
 
                     if (mirrorOptional.isPresent()) {
-                        AnnotationMirror annotationMirror = mirrorOptional.get();
 
-                        Map<? extends ExecutableElement, ? extends AnnotationValue> elementValues = annotationMirror.getElementValues();
+                        UnifiedGenBuilder genBuilder = mirrorOptional.get();
+                        AnnotationMirror annotationMirror = (AnnotationMirror) AnnotationsKt.getHandlerOfAnnotation(genBuilder).getOriginal();
 
-                        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : elementValues.entrySet()) {
-                            if (entry.getKey().getSimpleName().contentEquals("base")) {
-                                AnnotationValue value = entry.getValue();
-
-                                Object baseValue = value.getValue();
-
-                                if (!(baseValue instanceof DeclaredType)) {
-                                    this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Value '" + baseValue + "' provided to 'base' property of @GenBuilder annotation is not valid.", annotatedElement, annotationMirror, value);
-                                    return false;
-                                }
-
-                                baseType = TypeElementUtil.toCodeType((DeclaredType) baseValue, processingEnvironment.getElementUtils());
-                            }
-
-                            if (entry.getKey().getSimpleName().contentEquals("qualifiedName")) {
-                                String value = (String) entry.getValue().getValue();
-
-
-                                boolean isKeyword = false;
-                                for (Field field : Keywords.class.getDeclaredFields()) {
-
-                                    if (Keyword.class.isAssignableFrom(field.getType())) {
-                                        try {
-                                            isKeyword |= value.equals(((Keyword) field.get(null)).getName());
-                                        } catch (IllegalAccessException ignored) {
-                                        }
-                                    }
-                                }
-
-                                if (value.equals("null") || value.equals("true") || value.equals("false") || isKeyword || !FQ_REGEX.matcher(value).matches()) {
-                                    this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Invalid class name '" + value + "', the class name MUST match the java class naming rules (Java Language Specification, Section 3.8. Identifiers).", annotatedElement, annotationMirror, entry.getValue());
-                                    return false;
-                                }
-
-                                if (!value.isEmpty())
-                                    builderQualifiedName = value;
-                            }
-                        }
-
-                        if (baseType == null) {
+                        if (!Default.isDefaultType(genBuilder.base())) {
+                            baseType = genBuilder.base();
+                        } else {
                             List<? extends TypeMirror> interfaces = ((TypeElement) enclosingElement).getInterfaces();
 
                             if (interfaces.size() == 1) {
@@ -343,6 +284,31 @@ public class AnnotationProcessor extends AbstractProcessor {
                             }
                         }
 
+                        if (!genBuilder.qualifiedName().isEmpty()) {
+                            String value = genBuilder.qualifiedName();
+
+
+                            boolean isKeyword = false;
+                            for (Field field : Keywords.class.getDeclaredFields()) {
+
+                                if (Keyword.class.isAssignableFrom(field.getType())) {
+                                    try {
+                                        isKeyword |= value.equals(((Keyword) field.get(null)).getName());
+                                    } catch (IllegalAccessException ignored) {
+                                    }
+                                }
+                            }
+
+                            if (value.equals("null") || value.equals("true") || value.equals("false") || isKeyword || !FQ_REGEX.matcher(value).matches()) {
+                                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Invalid class name '" + value + "', the class name MUST match the java class naming rules (Java Language Specification, Section 3.8. Identifiers).", annotatedElement, annotationMirror);
+                                return false;
+                            }
+
+                            builderQualifiedName = value;
+                        } else {
+                            builderQualifiedName = factoryResultType.getPackageName() + ".builder." + baseType.getSimpleName() + "Builder";
+                        }
+
                     }
 
                     if (baseType == null) {
@@ -350,18 +316,11 @@ public class AnnotationProcessor extends AbstractProcessor {
                         return false;
                     }
 
-                    if (builderQualifiedName == null) {
-                        builderQualifiedName = factoryResultType.getPackageName() + ".builder." + baseType.getSimpleName() + "Builder";
-                    }
-
                     List<? extends VariableElement> parameters = executableElement.getParameters();
 
                     List<String> propertyOrder = new ArrayList<>();
 
                     for (VariableElement parameter : parameters) {
-                        TypeMirror typeMirror = parameter.asType();
-                        String s = typeMirror.toString();
-
                         propertyOrder.add(parameter.getSimpleName().toString());
                     }
 
@@ -407,7 +366,6 @@ public class AnnotationProcessor extends AbstractProcessor {
                     List<ExecutableElement> builderMethods = new ArrayList<>();
 
 
-
                     List<PropertySpec> propertySpecs = new ArrayList<>();
 
                     String boundTypeName = null;
@@ -434,12 +392,12 @@ public class AnnotationProcessor extends AbstractProcessor {
                     }
 
                     this.consumeMethods(builder, methodToConsume -> {
-                        Optional<AnnotationMirror> annotationMirror = AnnotatedConstructUtil.getAnnotationMirror(methodToConsume, "com.github.jonathanxd.buildergenerator.annotation.DefaultImpl");
+                        Optional<UnifiedDefaultImpl> unifiedDefaultImplOpt = AnnotatedConstructUtil.getUnifiedAnnotation(methodToConsume, "com.github.jonathanxd.buildergenerator.annotation.DefaultImpl", UnifiedDefaultImpl.class);
 
-                        if(methodToConsume.isDefault() || annotationMirror.isPresent()) {
+                        if (methodToConsume.isDefault() || unifiedDefaultImplOpt.isPresent()) {
 
-                            if(!methodToConsume.isDefault()) {
-                                Annotation annotation = (Annotation) AnnotationMirrorUtil.toCodeAPI(annotationMirror.get(), this.processingEnvironment.getElementUtils());
+                            if (!methodToConsume.isDefault()) {
+                                UnifiedDefaultImpl unifiedDefault = unifiedDefaultImplOpt.get();
 
                                 List<CodeParameter> collect = methodToConsume
                                         .getParameters()
@@ -456,7 +414,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                                         .withParameters(collect)
                                         .build();
 
-                                MethodRefSpec methodRefSpec = MethodRefValidator.get(methodToConsume, (Annotation) annotation.getValues().get("value"), this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.DEFAULT_IMPL);
+                                MethodRefSpec methodRefSpec = MethodRefValidator.get(methodToConsume, unifiedDefault.value(), this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.DEFAULT_IMPL);
 
                                 methodSpecs.add(new MethodSpec(targetMethod, methodRefSpec));
 
@@ -538,11 +496,11 @@ public class AnnotationProcessor extends AbstractProcessor {
                         } else {
 
 
-                            Optional<AnnotationMirror> mirror = AnnotatedConstructUtil.getAnnotationMirror(withMethod, PROPERTY_INFO_ANNOTATION_CLASS);
+                            Optional<UnifiedPropertyInfo> unifiedPropertyInfoOpt = AnnotatedConstructUtil.getUnifiedAnnotation(withMethod, PROPERTY_INFO_ANNOTATION_CLASS, UnifiedPropertyInfo.class);
 
-                            if (mirror.isPresent()) {
+                            if (unifiedPropertyInfoOpt.isPresent()) {
 
-                                PropertySpec from = this.from(s, type, withMethod, mirror.get(), isNullable, isOptional);
+                                PropertySpec from = this.from(s, type, withMethod, unifiedPropertyInfoOpt.get(), isNullable, isOptional);
 
                                 String name = from.getDefaultsPropertyName();
 
@@ -551,7 +509,8 @@ public class AnnotationProcessor extends AbstractProcessor {
                                     Optional<ExecutableElement> propertyGetter = ExecutableElementsUtil.get(executables, "get" + StringsKt.capitalize(name));
 
                                     if (!propertyGetter.isPresent()) {
-                                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Specified property name '" + name + "' cannot be found!.", withMethod, mirror.get());
+                                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Specified property name '" + name + "' cannot be found!.", withMethod,
+                                                (AnnotationMirror) AnnotationsKt.getHandlerOfAnnotation(unifiedPropertyInfoOpt.get()).getOriginal());
                                         return false;
                                     }
                                 }
@@ -575,7 +534,8 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                         CodeAPIBuilderGenerator.Source builderGenerator = new CodeAPIBuilderGenerator.Source();
 
-                        Pair<TypeDeclaration, String> pair = builderGenerator.generate(builderSpec, methodTypeSpecs -> {});
+                        Pair<TypeDeclaration, String> pair = builderGenerator.generate(builderSpec, methodTypeSpecs -> {
+                        });
 
                         TypeDeclaration declaration = pair._1();
 
@@ -629,20 +589,19 @@ public class AnnotationProcessor extends AbstractProcessor {
         return false;
     }
 
-    private PropertySpec from(String name, CodeType type, ExecutableElement annotated, AnnotationMirror annotationMirror, boolean isNullable_, boolean isOptional) {
+    private PropertySpec from(String name, CodeType type, ExecutableElement annotated, UnifiedPropertyInfo unifiedPropertyInfo, boolean isNullable_, boolean isOptional) {
 
-        AnnotationMirrorHelper annotationMirrorHelper = new AnnotationMirrorHelper(annotationMirror, processingEnvironment.getElementUtils());
 
-        boolean isNullable = annotationMirrorHelper.<Boolean>get("isNullable").orElse(isNullable_);
+        boolean isNullable = isNullable_ || unifiedPropertyInfo.isNullable();
 
-        String defaultsPropertyName = annotationMirrorHelper.<String>get("defaultsPropertyName").orElse(name);
+        String defaultsPropertyName = Default.stringOptional(unifiedPropertyInfo.defaultsPropertyName()).orElse(name);
 
-        MethodRefSpec defaultValue = annotationMirrorHelper.<Annotation>get("defaultValue")
+        MethodRefSpec defaultValue = Default.methodRefOptional(unifiedPropertyInfo.defaultValue())
                 .map(annotation -> MethodRefValidator.get(annotated, annotation, this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.DEFAULT_VALUE))
                 .orElse(null);
 
 
-        MethodRefSpec validator = annotationMirrorHelper.<Annotation>get("validator")
+        MethodRefSpec validator = Default.methodRefOptional(unifiedPropertyInfo.validator().value())
                 .map(annotation -> MethodRefValidator.get(annotated, annotation, this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.VALIDATOR))
                 .orElse(null);
 

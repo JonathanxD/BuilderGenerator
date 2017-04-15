@@ -27,6 +27,9 @@
  */
 package com.github.jonathanxd.buildergenerator.util;
 
+import com.github.jonathanxd.buildergenerator.unification.UnificationFactory;
+import com.github.jonathanxd.codeapi.extra.UnifiedAnnotation;
+
 import java.util.Optional;
 
 import javax.lang.model.AnnotatedConstruct;
@@ -39,18 +42,19 @@ public final class AnnotatedConstructUtil {
     }
 
     /**
-     * Gets the {@link AnnotationMirror} corresponding to {@code annotationName} in {@link
+     * Gets the {@link UnifiedAnnotation} corresponding to {@code annotationName} in {@link
      * AnnotatedConstruct annotated element}.
      *
      * @param annotatedConstruct Annotated element.
      * @param annotationName     Annotation type name (full qualified).
+     * @param type               Type of unification class.
      * @return {@link Optional} of found {@link AnnotationMirror}, or empty {@link Optional} if not
      * found.
      */
-    public static Optional<AnnotationMirror> getAnnotationMirror(AnnotatedConstruct annotatedConstruct, String annotationName) {
+    public static <T extends UnifiedAnnotation> Optional<T> getUnifiedAnnotation(AnnotatedConstruct annotatedConstruct, String annotationName, Class<T> type) {
         for (AnnotationMirror annotationMirror : annotatedConstruct.getAnnotationMirrors()) {
             if (annotationMirror.getAnnotationType().toString().equals(annotationName))
-                return Optional.of(annotationMirror);
+                return Optional.of(UnificationFactory.create(annotationMirror, type));
         }
 
         return Optional.empty();

@@ -25,38 +25,45 @@
  *      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *      THE SOFTWARE.
  */
-package com.github.jonathanxd.buildergenerator.test;
+package com.github.jonathanxd.buildergenerator.unification;
 
-import com.google.common.truth.FailureStrategy;
-import com.google.testing.compile.JavaFileObjects;
-import com.google.testing.compile.JavaSourcesSubjectFactory;
+import com.github.jonathanxd.codeapi.extra.UnifiedAnnotation;
+import com.github.jonathanxd.codeapi.type.CodeType;
 
-import com.github.jonathanxd.buildergenerator.apt.AnnotationProcessor;
-import com.github.jonathanxd.iutils.collection.CollectionUtils;
+/**
+ * Generates a builder.
+ *
+ * Only classes, constructors and static factory methods is valid.
+ *
+ * If a class is annotated, a constructor is required. (Constructor with more parameters will be
+ * used).
+ */
+public interface UnifiedGenBuilder extends UnifiedAnnotation {
 
-import org.junit.Test;
+    /**
+     * Base class.
+     *
+     * The base class MUST have an inner-class interface 'Builder' that extends {@link
+     * com.github.jonathanxd.buildergenerator.Builder}.
+     *
+     * See the builder style in javadoc.
+     *
+     * If this annotation is present in a constructor, this property must be defined, if the
+     * annotation is present in a factory method, the return type will be used as base class.
+     *
+     * @return Base class.
+     */
+    CodeType base();
 
-import javax.tools.JavaFileObject;
-
-public class SimpleTest {
-
-    public static final JavaFileObject INTERFACE = JavaFileObjects.forResource("Person.java");
-
-    public static final JavaFileObject IMPL = JavaFileObjects.forResource("PersonImpl.java");
-
-    @Test
-    public void test() {
-        JavaSourcesSubjectFactory.javaSources()
-                .getSubject(new Fail(),
-                        CollectionUtils.listOf(INTERFACE, IMPL))
-                .withCompilerOptions("-Ajonathanxd.buildergenerator.throwExceptions=true")
-                .processedWith(new AnnotationProcessor())
-                .compilesWithoutError();
-
-    }
-
-
-    public static class Fail extends FailureStrategy {
-    }
+    /**
+     * Qualified name of the builder.
+     *
+     * If this property is not defined, {@link com.github.jonathanxd.buildergenerator.apt.AnnotationProcessor}
+     * will use the {@code factory result type} name as a base name and create a sub-package
+     * 'builder' in the {@code factory result type} package.
+     *
+     * @return Qualified name of the builder.
+     */
+    String qualifiedName();
 
 }
