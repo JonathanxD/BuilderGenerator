@@ -253,9 +253,8 @@ public final class Conversions {
                     ptypes == null ? null : Arrays.asList(ptypes), "'parameterTypes' property not set");
 
             if (parameterTypes.size() > 0) {
-                if(ptypes != null && ptypes.length != parameterTypes.size())
-                    return Optional.empty();
-                /*Conditions.require(ptypes.length == parameterTypes.size(), "'methodRef.parameterTypes().length' must be equal to 'ptypes.length'!");*/
+                if(ptypes != null)
+                Conditions.require(ptypes.length == parameterTypes.size(), "'methodRef.parameterTypes().length' must be equal to 'ptypes.length'!");
             }
 
             return Optional.of(new MethodTypeSpec(value, name,
