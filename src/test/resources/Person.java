@@ -39,6 +39,7 @@ import com.github.jonathanxd.codeapi.Types;
 import com.github.jonathanxd.codeapi.common.TypeSpec;
 import com.github.jonathanxd.iutils.collection.CollectionUtils;
 
+import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Set;
 
@@ -49,7 +50,9 @@ public interface Person {
 
     Image getImage();
 
-    Set<Person> getParents();
+    Set<? extends Person> getParents();
+
+    Type getType();
 
     interface Builder<T extends Person, S extends Builder<T, S>> extends com.github.jonathanxd.buildergenerator.Builder<T, S> {
 
@@ -66,10 +69,12 @@ public interface Person {
         @PropertyInfo(defaultValue = @MethodRef(value = DefaultValues.class, name = "empty"))
         S withImage(Image imagem);
 
-        S withParents(Set<Person> parents);
+        S withParents(Set<? extends Person> parents);
 
         @DefaultImpl(@MethodRef(value = Defaults.class, name = "varArgToSet"))
         S withParents(Person... parents);
+
+        S withType(Type type);
 
         public static class DefaultImpls {
 

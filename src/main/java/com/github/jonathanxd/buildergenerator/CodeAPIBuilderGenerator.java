@@ -218,13 +218,21 @@ public final class CodeAPIBuilderGenerator {
 
             body.add(CodeAPI.setThisField(type, name, CodeAPI.accessLocalVariable(type, name)));
             body.add(CodeAPI.returnValue(currentType, CodeAPI.accessThis()));
+            // Good type, not better type, I know
+            CodeType goodType;
+
+            if(!type.is(propertySpec.getBuilderSetterType())) {
+                goodType = CodeTypes.getConcreteType(propertySpec.getBuilderSetterType());
+            } else {
+                goodType = type;
+            }
 
             mutableCodeSource.add(
                     MethodDeclarationBuilder.builder()
                             .withModifiers(CodeModifier.PUBLIC)
                             .withReturnType(currentType)
                             .withName("with" + StringsKt.capitalize(name))
-                            .withParameters(CodeAPI.parameter(type, name))
+                            .withParameters(CodeAPI.parameter(goodType, name))
                             .withBody(body)
                             .withBody(body)
                             .build()

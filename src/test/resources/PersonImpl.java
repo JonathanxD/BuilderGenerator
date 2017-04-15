@@ -29,6 +29,7 @@ package com;
 
 import com.github.jonathanxd.buildergenerator.annotation.GenBuilder;
 
+import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Set;
 
@@ -37,13 +38,15 @@ public class PersonImpl implements Person {
     private final String name;
     private final int age;
     private final com.Person.Image image;
-    private final Set<com.Person> parents;
+    private final Set<? extends com.Person> parents;
+    private final Type type;
 
-    public PersonImpl(String name, int age, com.Person.Image image, Set<com.Person> parents) {
+    public PersonImpl(String name, int age, com.Person.Image image, Set<? extends com.Person> parents, Type type) {
         this.name = name;
         this.age = age;
         this.image = image;
         this.parents = parents;
+        this.type = type;
     }
 
     @Override
@@ -62,7 +65,11 @@ public class PersonImpl implements Person {
     }
 
     @Override
-    public Set<com.Person> getParents() {
+    public Set<? extends com.Person> getParents() {
         return this.parents;
+    }
+
+    public Type getType() {
+        return this.type;
     }
 }

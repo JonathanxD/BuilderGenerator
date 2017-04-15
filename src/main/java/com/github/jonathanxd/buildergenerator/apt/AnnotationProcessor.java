@@ -36,7 +36,6 @@ import com.github.jonathanxd.buildergenerator.spec.BuilderSpec;
 import com.github.jonathanxd.buildergenerator.spec.MethodRefSpec;
 import com.github.jonathanxd.buildergenerator.spec.MethodSpec;
 import com.github.jonathanxd.buildergenerator.spec.PropertySpec;
-import com.github.jonathanxd.buildergenerator.unification.UnificationFactory;
 import com.github.jonathanxd.buildergenerator.unification.UnifiedDefaultImpl;
 import com.github.jonathanxd.buildergenerator.unification.UnifiedGenBuilder;
 import com.github.jonathanxd.buildergenerator.unification.UnifiedMethodRef;
@@ -56,6 +55,7 @@ import com.github.jonathanxd.codeapi.keyword.Keyword;
 import com.github.jonathanxd.codeapi.keyword.Keywords;
 import com.github.jonathanxd.codeapi.type.CodeType;
 import com.github.jonathanxd.codeapi.type.GenericType;
+import com.github.jonathanxd.codeapi.util.CodeTypes;
 import com.github.jonathanxd.codeapi.util.Identity;
 import com.github.jonathanxd.codeapi.util.ModelCodeTypesKt;
 import com.github.jonathanxd.iutils.collection.CollectionUtils;
@@ -318,10 +318,10 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                     List<? extends VariableElement> parameters = executableElement.getParameters();
 
-                    List<String> propertyOrder = new ArrayList<>();
+                    List<Pair<String, CodeType>> propertyOrder = new ArrayList<>();
 
                     for (VariableElement parameter : parameters) {
-                        propertyOrder.add(parameter.getSimpleName().toString());
+                        propertyOrder.add(Pair.of(parameter.getSimpleName().toString(), ModelCodeTypesKt.getCodeType(parameter.asType())));
                     }
 
 
@@ -425,7 +425,9 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                     });
 
-                    for (String s : propertyOrder) {
+                    for (Pair<String, CodeType> prop : propertyOrder) {
+                        String s = prop._1();
+                        CodeType propertyType = prop._2();
 
                         Optional<ExecutableElement> optional = ExecutableElementsUtil.get(executables, "get" + StringsKt.capitalize(s));
                         Optional<ExecutableElement> builderMethod = ExecutableElementsUtil.get(builderMethods, "with" + StringsKt.capitalize(s));
@@ -443,7 +445,8 @@ public class AnnotationProcessor extends AbstractProcessor {
                         ExecutableElement getter = optional.get();
                         ExecutableElement withMethod = builderMethod.get();
 
-                        GenericType propertyType = (GenericType) TypeElementUtil.toCodeType(getter.getReturnType(), this.processingEnvironment.getElementUtils());
+                        /*GenericType propertyType = (GenericType) TypeElementUtil.toCodeType(getter.getReturnType(), this.processingEnvironment.getElementUtils());*/
+
 
                         String simpleName = withMethod.getSimpleName().toString();
                         List<? extends VariableElement> params = withMethod.getParameters();
@@ -456,9 +459,11 @@ public class AnnotationProcessor extends AbstractProcessor {
                         boolean isNullable = false;
                         boolean isOptional = false;
 
-                        if (type.getCanonicalName().equals("java.util.Optional") && !type.is(parameterType)) {
+                        if (propertyType instanceof GenericType
+                                && propertyType.getCanonicalName().equals("java.util.Optional")
+                                && !type.is(parameterType)) {
 
-                            GenericType.Bound[] bounds = propertyType.getBounds();
+                            GenericType.Bound[] bounds = ((GenericType) propertyType).getBounds();
 
                             if (bounds.length > 0) {
                                 type = bounds[0].getType();
@@ -509,7 +514,8 @@ public class AnnotationProcessor extends AbstractProcessor {
                                     Optional<ExecutableElement> propertyGetter = ExecutableElementsUtil.get(executables, "get" + StringsKt.capitalize(name));
 
                                     if (!propertyGetter.isPresent()) {
-                                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Specified property name '" + name + "' cannot be found!.", withMethod,
+                                        this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                                "Specified property name '" + name + "' cannot be found!.", withMethod,
                                                 (AnnotationMirror) AnnotationsKt.getHandlerOfAnnotation(unifiedPropertyInfoOpt.get()).getOriginal());
                                         return false;
                                     }
@@ -522,7 +528,7 @@ public class AnnotationProcessor extends AbstractProcessor {
 
 
                         if (!any) {
-                            propertySpecs.add(new PropertySpec(s, s, type, isNullable, isOptional, null, null));
+                            propertySpecs.add(new PropertySpec(s, s, type, ModelCodeTypesKt.getCodeType(withMethod.getParameters().get(0).asType()), isNullable, isOptional, null, null));
                         }
 
                     }
@@ -605,7 +611,7 @@ public class AnnotationProcessor extends AbstractProcessor {
                 .map(annotation -> MethodRefValidator.get(annotated, annotation, this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.VALIDATOR))
                 .orElse(null);
 
-        return new PropertySpec(name, defaultsPropertyName, type, isNullable, isOptional, defaultValue, validator);
+        return new PropertySpec(name, defaultsPropertyName, type, ModelCodeTypesKt.getCodeType(annotated.getParameters().get(0).asType()), isNullable, isOptional, defaultValue, validator);
 
     }
 

@@ -36,6 +36,8 @@ import com.github.jonathanxd.iutils.collection.CollectionUtils;
 
 import org.junit.Test;
 
+import java.util.Set;
+
 import javax.tools.JavaFileObject;
 
 public class SimpleTest {

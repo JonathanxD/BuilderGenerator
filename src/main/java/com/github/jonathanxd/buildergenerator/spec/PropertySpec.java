@@ -27,7 +27,6 @@
  */
 package com.github.jonathanxd.buildergenerator.spec;
 
-import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
 import com.github.jonathanxd.codeapi.type.CodeType;
 
 import java.util.Optional;
@@ -53,6 +52,11 @@ public final class PropertySpec {
     private final CodeType type;
 
     /**
+     * Builder setter method type
+     */
+    private final CodeType builderSetterType;
+
+    /**
      * Is property nullable (always true for {@link Optional} properties)
      */
     private final boolean isNullable;
@@ -72,10 +76,11 @@ public final class PropertySpec {
      */
     private final MethodRefSpec validatorSpec;
 
-    public PropertySpec(String name, String defaultsPropertyName, CodeType type, boolean isNullable, boolean isOptional, MethodRefSpec defaultValueSpec, MethodRefSpec validatorSpec) {
+    public PropertySpec(String name, String defaultsPropertyName, CodeType type, CodeType builderSetterType, boolean isNullable, boolean isOptional, MethodRefSpec defaultValueSpec, MethodRefSpec validatorSpec) {
         this.name = name;
         this.defaultsPropertyName = defaultsPropertyName;
         this.type = type;
+        this.builderSetterType = builderSetterType;
         this.isNullable = isNullable;
         this.isOptional = isOptional;
         this.defaultValueSpec = defaultValueSpec;
@@ -107,6 +112,15 @@ public final class PropertySpec {
      */
     public CodeType getType() {
         return this.type;
+    }
+
+    /**
+     * Gets the builder setter type.
+     *
+     * @return Builder setter type.
+     */
+    public CodeType getBuilderSetterType() {
+        return this.builderSetterType;
     }
 
     /**
