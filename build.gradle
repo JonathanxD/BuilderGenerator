@@ -47,7 +47,7 @@ dependencies {
 
     // Ap-only dependencies
     apOnly("com.github.JonathanxD:CodeAPI-SourceWriter:$source_writer_version")  { exclude module: "CodeAPI" }
-    compile("com.github.JonathanxD:CodeAPI-Extra:$codeapi_extra_version") { exclude module: "CodeAPI" }
+    apOnly("com.github.JonathanxD:CodeAPI-Extra:$codeapi_extra_version") { exclude module: "CodeAPI" }
     apOnly "com.github.JonathanxD:CodeAPI:$codeapi_version"
     apOnly "com.github.JonathanxD:JwIUtils:$jwiutils_version"
 
