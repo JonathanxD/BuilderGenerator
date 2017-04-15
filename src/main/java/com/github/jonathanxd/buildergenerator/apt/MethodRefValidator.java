@@ -34,11 +34,9 @@ import com.github.jonathanxd.buildergenerator.unification.UnifiedMethodRef;
 import com.github.jonathanxd.buildergenerator.util.AnnotatedConstructUtil;
 import com.github.jonathanxd.buildergenerator.util.CTypeUtil;
 import com.github.jonathanxd.buildergenerator.util.TypeElementUtil;
-import com.github.jonathanxd.buildergenerator.util.TypeResolver;
 import com.github.jonathanxd.codeapi.CodeAPI;
 import com.github.jonathanxd.codeapi.CodePart;
 import com.github.jonathanxd.codeapi.Types;
-import com.github.jonathanxd.codeapi.base.Annotation;
 import com.github.jonathanxd.codeapi.base.MethodDeclaration;
 import com.github.jonathanxd.codeapi.base.VariableBase;
 import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
@@ -53,9 +51,7 @@ import com.github.jonathanxd.iutils.type.TypeInfo;
 import org.jetbrains.annotations.NonNls;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.AnnotationMirror;
@@ -91,11 +87,11 @@ public class MethodRefValidator {
     /**
      * Validates the method.
      *
-     * @param annotated  Annotated element.
-     * @param methodRef  MethodRef Annotation mirror.
-     * @param messager   Messager to log errors.
-     * @param elements   Element utilities to resolve types.
-     * @param type       Type of the annotation to validate.
+     * @param annotated Annotated element.
+     * @param methodRef MethodRef Annotation mirror.
+     * @param messager  Messager to log errors.
+     * @param elements  Element utilities to resolve types.
+     * @param type      Type of the annotation to validate.
      * @return True if success, false if validation failed.
      */
     public static boolean validate(ExecutableElement annotated, UnifiedMethodRef methodRef, Messager messager, Elements elements, Type type) {
@@ -108,17 +104,17 @@ public class MethodRefValidator {
             MethodRefValidator.get(annotated, methodRef, elements, type);
         } catch (IllegalArgumentException e) {
 
-            if(mirror == null || Options.isThrowExceptions())
+            if (mirror == null || Options.isThrowExceptions())
                 throw e;
 
             messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage(), annotated, mirror);
             return false;
         } catch (ReferencedMethodException e) {
-            if(mirror != null)
+            if (mirror != null)
                 messager.printMessage(Diagnostic.Kind.WARNING, e.getMessage(), annotated, mirror);
 
             messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage(), e.getReferencedMethod());
-            if(mirror == null || Options.isThrowExceptions())
+            if (mirror == null || Options.isThrowExceptions())
                 throw e;
 
             return false;
@@ -130,9 +126,9 @@ public class MethodRefValidator {
     /**
      * Validates the method.
      *
-     * @param annotated  Annotated element.
-     * @param elements   Element utilities to resolve types.
-     * @param type       Type of the annotation to validate.
+     * @param annotated Annotated element.
+     * @param elements  Element utilities to resolve types.
+     * @param type      Type of the annotation to validate.
      * @return True if success, false if validation failed.
      */
     public static MethodRefSpec get(ExecutableElement annotated, UnifiedMethodRef unifiedMethodRef, Elements elements, Type type) {
@@ -161,7 +157,10 @@ public class MethodRefValidator {
                 break;
             }
             case DEFAULT_IMPL: {
-                resolvedMethodRef = AptResolver.resolveMethodRef(unifiedMethodRef, codePart, new CodeType[]{CodeAPI.getJavaType(MethodDeclaration.class), Types.LIST /* List<CodePart> */}, elements);
+                if (!unifiedMethodRef.name().startsWith(":"))
+                    resolvedMethodRef = AptResolver.resolveMethodRef(unifiedMethodRef, codePart, new CodeType[]{CodeAPI.getJavaType(MethodDeclaration.class), Types.LIST /* List<CodePart> */}, elements);
+                else
+                    resolvedMethodRef = null;
                 break;
             }
             default: {
@@ -247,7 +246,7 @@ public class MethodRefValidator {
 
             try {
                 concreteType = CodeAPI.getJavaType(TypeInfo.resolveClass(concreteType.getCanonicalName()));
-            }catch (Throwable ignored) {
+            } catch (Throwable ignored) {
             }
 
             if (isInline) {
