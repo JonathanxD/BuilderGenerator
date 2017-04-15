@@ -246,13 +246,23 @@ public final class CodeAPIBuilderGenerator {
             String name = propertySpec.getName();
             CodeType type = propertySpec.getType();
 
-            if (propertySpec.isOptional())
-                type = Generic.type(CodeAPI.getJavaType(Optional.class)).of(type);
+            // Good type, not better type, I know
+            CodeType goodType;
+
+            if(!type.is(propertySpec.getBuilderSetterType())) {
+                goodType = CodeTypes.getConcreteType(propertySpec.getBuilderSetterType());
+            } else {
+                goodType = type;
+            }
+
+            if (propertySpec.isOptional()) {
+                goodType = Generic.type(CodeAPI.getJavaType(Optional.class)).of(goodType);
+            }
 
             mutableCodeSource.add(
                     MethodDeclarationBuilder.builder()
                             .withModifiers(CodeModifier.PUBLIC)
-                            .withReturnType(type)
+                            .withReturnType(goodType)
                             .withName("get" + StringsKt.capitalize(name))
                             .withBody(CodeAPI.source(
                                     !propertySpec.isOptional()
