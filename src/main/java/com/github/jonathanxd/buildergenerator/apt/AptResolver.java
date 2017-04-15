@@ -65,7 +65,7 @@ public class AptResolver {
      * @return Null if cannot convert the annotation to {@link MethodTypeSpec} or a Pair of {@link
      * MethodTypeSpec method specification} and {@link ExecutableElement found method} (or null
      * {@link ExecutableElement} if the method cannot be found).
-     * @see Conversions.CAPI#toMethodSpec(Annotation, CodeType, CodeType[])
+     * @see Conversions.CAPI#toMethodSpec(UnifiedMethodRef, CodeType, CodeType[])
      */
     @Nullable
     public static Pair<MethodTypeSpec, ExecutableElement> resolveMethodRef(UnifiedMethodRef unifiedMethodRef, CodeType rtype, CodeType[] ptypes, Elements elements) {
