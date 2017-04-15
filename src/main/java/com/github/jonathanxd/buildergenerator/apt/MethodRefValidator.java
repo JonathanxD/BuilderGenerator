@@ -210,6 +210,12 @@ public class MethodRefValidator {
 
                     ptypes = typeList.toArray(new CodeType[typeList.size()]);
                     baseRetType = rtype;
+
+                    if(unifiedMethodRef.name().startsWith(":")) {
+                        resolvedMethodRef = MethodRefValidator.resolveThis(unifiedMethodRef, annotated, elements);
+                        if (resolvedMethodRef != null)
+                            isThis = true;
+                    }
                     break;
                 }
                 default: {
@@ -219,13 +225,11 @@ public class MethodRefValidator {
                 }
             }
 
-            resolvedMethodRef = AptResolver.resolveMethodRef(unifiedMethodRef, baseRetType, ptypes, elements);
-
-            if (resolvedMethodRef == null && type == Type.DEFAULT_IMPL) {
-                resolvedMethodRef = MethodRefValidator.resolveThis(unifiedMethodRef, annotated, elements);
-                if (resolvedMethodRef != null)
-                    isThis = true;
+            if(resolvedMethodRef == null|| resolvedMethodRef._2() == null) {
+                resolvedMethodRef = AptResolver.resolveMethodRef(unifiedMethodRef, baseRetType, ptypes, elements);
             }
+
+
 
         }
 
@@ -273,20 +277,16 @@ public class MethodRefValidator {
 
         CodeType rtype = TypeElementUtil.toCodeType(annotated.getReturnType(), elements);
 
-        Pair<MethodTypeSpec, ExecutableElement> resolve = AptResolver.resolveMethodRef(unifiedMethodRef, rtype, ptypes, elements);
+        String methodName = unifiedMethodRef.name();
 
-        if (resolve != null && resolve._1() != null && resolve._2() == null) {
-            String methodName = resolve._1().getMethodName();
+        if (methodName.startsWith(":") && methodName.length() > 1) {
 
-            if (methodName.startsWith(":") && methodName.length() > 1) {
+            UnifiedMethodRef map = UnifiedAnnotationsUtilKt.map(unifiedMethodRef, stringObjectMap -> {
+                stringObjectMap.put("name", methodName.substring(1));
+                return Unit.INSTANCE;
+            });
 
-                UnifiedMethodRef map = UnifiedAnnotationsUtilKt.map(unifiedMethodRef, stringObjectMap -> {
-                    stringObjectMap.put("name", methodName.substring(1));
-                    return Unit.INSTANCE;
-                });
-
-                return AptResolver.resolveMethodRef(map, rtype, ptypes, elements);
-            }
+            return AptResolver.resolveMethodRef(map, rtype, ptypes, elements);
         }
 
         return null;
