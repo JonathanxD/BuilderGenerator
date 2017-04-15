@@ -472,9 +472,9 @@ public class AnnotationProcessor extends AbstractProcessor {
                         }
 
                         boolean isValid = params.size() == 1;
-
+                        //Identity.nonStrictEq(parameterType, type)
                         if (!Options.isDisableStrictSetterCheck()) {
-                            if (!Identity.nonStrictEq(parameterType, type)
+                            if (!parameterType.getIdentification().equals(type.getIdentification())
                                     || (boundTypeName == null && !Identity.nonStrictEq(returnType, builderType))
                                     || (boundTypeName != null && !returnType.getCanonicalName().equals(boundTypeName))) {
                                 isValid = false;
