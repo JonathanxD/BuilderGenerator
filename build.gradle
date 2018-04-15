@@ -1,12 +1,12 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
-    id 'com.github.hierynomus.license' version '0.11.0'
-    id 'com.github.johnrengelman.shadow' version '1.2.3'
+    id 'com.github.hierynomus.license' version '0.13.1'
+    id 'com.github.johnrengelman.shadow' version '2.0.2'
 }
 
 group 'com.github.jonathanxd'
-version '1.0.24'
+version '1.1.0'
 
 apply plugin: 'idea'
 apply plugin: 'java'
@@ -32,23 +32,23 @@ configurations {
     apOnly
 }
 
-ext.bytecode_writer_version = '3.2.5-3.2.0-a'
-ext.source_writer_version = '3.2.5-3.2.2'
-ext.codeapi_extra_version = '1.0-hotfix2'
-ext.codeapi_version = '3.3.2'
-ext.jwiutils_version = '3.6.0'
+ext.bytecode_writer_version = '4.0.0.36-beta-bytecode'
+ext.source_writer_version = '4.0.0.23-beta-source'
+ext.kores_extra_version = '1.3.4'
+ext.kores_version = '4.0.0.48-beta'
+ext.jwiutils_version = '4.16.1'
 
 dependencies {
-    compile("com.github.JonathanxD:CodeAPI-BytecodeWriter:$bytecode_writer_version") { exclude module: "CodeAPI" }
-    compile("com.github.JonathanxD:CodeAPI-SourceWriter:$source_writer_version") { exclude module: "CodeAPI" }
-    compile("com.github.JonathanxD:CodeAPI-Extra:$codeapi_extra_version") { exclude module: "CodeAPI" }
-    compile "com.github.JonathanxD:CodeAPI:$codeapi_version"
+    compile("com.github.JonathanxD.Kores-BytecodeWriter:Kores-BytecodeWriter:$bytecode_writer_version")
+    compile("com.github.JonathanxD.Kores-SourceWriter:Kores-SourceWriter:$source_writer_version")
+    compile("com.github.JonathanxD:Kores-Extra:$kores_extra_version")
+    compile "com.github.JonathanxD.Kores:Kores:$kores_version"
     compile "com.github.JonathanxD:JwIUtils:$jwiutils_version"
 
     // Ap-only dependencies
-    apOnly("com.github.JonathanxD:CodeAPI-SourceWriter:$source_writer_version")  { exclude module: "CodeAPI" }
-    apOnly("com.github.JonathanxD:CodeAPI-Extra:$codeapi_extra_version") { exclude module: "CodeAPI" }
-    apOnly "com.github.JonathanxD:CodeAPI:$codeapi_version"
+    apOnly("com.github.JonathanxD.Kores-SourceWriter:Kores-SourceWriter:$source_writer_version")
+    apOnly("com.github.JonathanxD:Kores-Extra:$kores_extra_version")
+    apOnly "com.github.JonathanxD.Kores:Kores:$kores_version"
     apOnly "com.github.JonathanxD:JwIUtils:$jwiutils_version"
 
     testCompile "com.google.testing.compile:compile-testing:0.8"
@@ -82,23 +82,39 @@ task apOnlyJar(type: ShadowJar, dependsOn: classes) {
 }
 
 shadowJar { // Relocate
-    relocate 'com.github.jonathanxd.codeapi', 'com.github.jonathanxd.buildergenerator.codeapi'
-    relocate 'com.github.jonathanxd.iutils', 'com.github.jonathanxd.buildergenerator.iutils'
-    relocate 'org.objectweb.asm', 'com.github.jonathanxd.buildergenerator.asm'
-    relocate 'com.google', 'com.github.jonathanxd.buildergenerator.com.google'
-    relocate 'org.jetbrains', 'com.github.jonathanxd.buildergenerator.org.jetbrains'
-    relocate 'org.intellij', 'com.github.jonathanxd.buildergenerator.org.intellij'
-    relocate 'kotlin', 'com.github.jonathanxd.buildergenerator.kotlin'
+    relocate 'com.github.jonathanxd.kores', 'com.github.jonathanxd.buildergenerator.lib.kores'
+    relocate 'com.github.jonathanxd.iutils', 'com.github.jonathanxd.buildergenerator.lib.iutils'
+    relocate 'com.github.jonathanxd.bytecodedisassembler', 'com.github.jonathanxd.buildergenerator.lib.bytecodedisassembler'
+    relocate 'org.json.simple', 'com.github.jonathanxd.buildergenerator.lib.json.simple'
+    relocate 'org.objectweb.asm', 'com.github.jonathanxd.buildergenerator.lib.asm'
+    relocate 'com.google', 'com.github.jonathanxd.buildergenerator.lib.com.google'
+    relocate 'org.jetbrains', 'com.github.jonathanxd.buildergenerator.lib.org.jetbrains'
+    relocate 'org.intellij', 'com.github.jonathanxd.buildergenerator.lib.org.intellij'
+    relocate 'kotlin', 'com.github.jonathanxd.buildergenerator.lib.kotlin'
+
+    dependencies {
+        exclude(dependency("com.google.testing.compile:.*"))
+        exclude(dependency("junit:junit:.*"))
+        exclude(dependency("org.hamcrest:.*:.*"))
+    }
 }
 
 apOnlyJar {
-    relocate 'com.github.jonathanxd.codeapi', 'com.github.jonathanxd.buildergenerator.codeapi'
-    relocate 'com.github.jonathanxd.iutils', 'com.github.jonathanxd.buildergenerator.iutils'
-    relocate 'org.objectweb.asm', 'com.github.jonathanxd.buildergenerator.asm'
-    relocate 'com.google', 'com.github.jonathanxd.buildergenerator.com.google'
-    relocate 'org.jetbrains', 'com.github.jonathanxd.buildergenerator.org.jetbrains'
-    relocate 'org.intellij', 'com.github.jonathanxd.buildergenerator.org.intellij'
-    relocate 'kotlin', 'com.github.jonathanxd.buildergenerator.kotlin'
+    relocate 'com.github.jonathanxd.kores', 'com.github.jonathanxd.buildergenerator.lib.kores'
+    relocate 'com.github.jonathanxd.iutils', 'com.github.jonathanxd.buildergenerator.lib.iutils'
+    relocate 'com.github.jonathanxd.bytecodedisassembler', 'com.github.jonathanxd.buildergenerator.lib.bytecodedisassembler'
+    relocate 'org.json.simple', 'com.github.jonathanxd.buildergenerator.lib.json.simple'
+    relocate 'org.objectweb.asm', 'com.github.jonathanxd.buildergenerator.lib.asm'
+    relocate 'com.google', 'com.github.jonathanxd.buildergenerator.lib.com.google'
+    relocate 'org.jetbrains', 'com.github.jonathanxd.buildergenerator.lib.org.jetbrains'
+    relocate 'org.intellij', 'com.github.jonathanxd.buildergenerator.lib.org.intellij'
+    relocate 'kotlin', 'com.github.jonathanxd.buildergenerator.lib.kotlin'
+
+    dependencies {
+        exclude(dependency("com.google.testing.compile:.*"))
+        exclude(dependency("junit:junit:.*"))
+        exclude(dependency("org.hamcrest:.*:.*"))
+    }
 }
 
 artifacts {

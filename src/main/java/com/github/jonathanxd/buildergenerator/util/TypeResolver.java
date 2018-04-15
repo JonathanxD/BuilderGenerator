@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -27,26 +27,24 @@
  */
 package com.github.jonathanxd.buildergenerator.util;
 
-import com.github.jonathanxd.codeapi.CodeAPI;
-import com.github.jonathanxd.codeapi.type.CodeType;
-import com.github.jonathanxd.codeapi.type.PlainCodeType;
-import com.github.jonathanxd.codeapi.util.CodeTypes;
-import com.github.jonathanxd.codeapi.util.GenericTypeUtil;
-import com.github.jonathanxd.codeapi.util.TypeElementCodeType;
-import com.github.jonathanxd.iutils.type.TypeInfo;
+import com.github.jonathanxd.iutils.type.TypeUtil;
+import com.github.jonathanxd.kores.type.KoresType;
+import com.github.jonathanxd.kores.type.KoresTypes;
+import com.github.jonathanxd.kores.type.ModelKoresTypesKt;
+import com.github.jonathanxd.kores.type.PlainKoresType;
+import com.github.jonathanxd.kores.util.KoresTypeResolverFunc;
 
-import java.util.function.Function;
+import org.jetbrains.annotations.NotNull;
 
-import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 
 /**
  * Type resolver, resolves class literal.
  *
- * @see TypeInfo#resolveClass(String)
+ * @see TypeUtil#resolveClass(String)
  */
-public final class TypeResolver implements Function<String, CodeType> {
+public final class TypeResolver extends KoresTypeResolverFunc {
 
     private final Elements elements;
 
@@ -54,21 +52,21 @@ public final class TypeResolver implements Function<String, CodeType> {
         this.elements = elements;
     }
 
+    @NotNull
     @Override
-    public CodeType apply(String s) {
+    protected KoresType resolve(String s) {
         try {
-            return CodeAPI.getJavaType(TypeInfo.resolveClass(s));
+            return KoresTypes.getKoresType(TypeUtil.resolveClass(s));
         } catch (Exception e) {
             if (elements != null) {
                 TypeElement typeElement = elements.getTypeElement(s);
 
                 if (typeElement != null) {
-                    return new TypeElementCodeType(typeElement);
+                    return ModelKoresTypesKt.getKoresType(typeElement, this.elements);
                 }
             }
 
-            return new PlainCodeType(s, false);
+            return new PlainKoresType(s, false);
         }
     }
-
 }

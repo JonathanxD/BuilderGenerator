@@ -25,7 +25,7 @@
  *      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *      THE SOFTWARE.
  */
-package com;
+package com.github.jonathanxd.buildergenerator.test.bd;
 
 import com.github.jonathanxd.buildergenerator.DefaultValues;
 import com.github.jonathanxd.buildergenerator.Defaults;
@@ -43,21 +43,21 @@ public interface Person {
 
     int getAge();
 
-    Image getImage();
+    Person.Image getImage();
 
     Set<? extends Person> getParents();
 
     Type getType();
 
-    interface Builder<T extends Person, S extends Builder<T, S>> extends com.github.jonathanxd.buildergenerator.Builder<T, S> {
+    interface Builder<T extends Person, S extends Person.Builder<T, S>> extends com.github.jonathanxd.buildergenerator.Builder<T, S> {
 
-        @DefaultImpl(value = @MethodRef(value = DefaultImpls.class, name = "withName", parameterTypes = {Builder.class, Object.class}))
+        @DefaultImpl(value = @MethodRef(value = Person.Builder.DefaultImpls.class, name = "withName", parameterTypes = {Person.Builder.class, Object.class}))
         S withName(Object o);
 
-        @DefaultImpl(value = @MethodRef(value = Builder.class, name = ":withName", parameterTypes = String.class))
+        @DefaultImpl(value = @MethodRef(value = Person.Builder.class, name = ":withName", parameterTypes = String.class))
         S withName(CharSequence sequence);
 
-        @DefaultImpl(value = @MethodRef(value = Builder.class, name = ":withName"))
+        @DefaultImpl(value = @MethodRef(value = Person.Builder.class, name = ":withName"))
         S name(String s);
 
         S withName(String name);
@@ -65,7 +65,7 @@ public interface Person {
         S withAge(int age);
 
         @PropertyInfo(defaultValue = @MethodRef(value = DefaultValues.class, name = "empty"))
-        S withImage(Image imagem);
+        S withImage(Person.Image imagem);
 
         S withParents(Set<? extends Person> parents);
 
@@ -76,7 +76,7 @@ public interface Person {
 
         public static class DefaultImpls {
 
-            public static Builder<Person, ?> withName(Builder<Person, ?> builder, Object o) {
+            public static Person.Builder<Person, ?> withName(Person.Builder<Person, ?> builder, Object o) {
                 return builder.withName((String) o);
             }
 
@@ -85,7 +85,7 @@ public interface Person {
 
 
     class Image {
-        public static final Image EMPTY = new Image(new byte[0]);
+        public static final Person.Image EMPTY = new Person.Image(new byte[0]);
 
         private final byte[] image;
 
@@ -93,8 +93,8 @@ public interface Person {
             this.image = image;
         }
 
-        public static Image empty() {
-            return Image.EMPTY;
+        public static Person.Image empty() {
+            return Person.Image.EMPTY;
         }
 
 

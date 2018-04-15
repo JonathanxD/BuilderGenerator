@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -27,7 +27,7 @@
  */
 package com.github.jonathanxd.buildergenerator.spec;
 
-import com.github.jonathanxd.codeapi.type.CodeType;
+import com.github.jonathanxd.kores.type.KoresType;
 
 import java.util.Optional;
 
@@ -49,12 +49,12 @@ public final class PropertySpec {
     /**
      * Property type.
      */
-    private final CodeType type;
+    private final KoresType type;
 
     /**
      * Builder setter method type
      */
-    private final CodeType builderSetterType;
+    private final KoresType builderSetterType;
 
     /**
      * Is property nullable (always true for {@link Optional} properties)
@@ -76,7 +76,7 @@ public final class PropertySpec {
      */
     private final MethodRefSpec validatorSpec;
 
-    public PropertySpec(String name, String defaultsPropertyName, CodeType type, CodeType builderSetterType, boolean isNullable, boolean isOptional, MethodRefSpec defaultValueSpec, MethodRefSpec validatorSpec) {
+    public PropertySpec(String name, String defaultsPropertyName, KoresType type, KoresType builderSetterType, boolean isNullable, boolean isOptional, MethodRefSpec defaultValueSpec, MethodRefSpec validatorSpec) {
         this.name = name;
         this.defaultsPropertyName = defaultsPropertyName;
         this.type = type;
@@ -110,7 +110,7 @@ public final class PropertySpec {
      *
      * @return Property type.
      */
-    public CodeType getType() {
+    public KoresType getType() {
         return this.type;
     }
 
@@ -119,7 +119,7 @@ public final class PropertySpec {
      *
      * @return Builder setter type.
      */
-    public CodeType getBuilderSetterType() {
+    public KoresType getBuilderSetterType() {
         return this.builderSetterType;
     }
 

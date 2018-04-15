@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -27,8 +27,14 @@
  */
 package com.github.jonathanxd.buildergenerator.unification;
 
-import com.github.jonathanxd.codeapi.extra.UnifiedAnnotation;
-import com.github.jonathanxd.codeapi.type.CodeType;
+import com.github.jonathanxd.iutils.opt.OptObject;
+import com.github.jonathanxd.kores.extra.DefaultListTypeCheck;
+import com.github.jonathanxd.kores.extra.Opt;
+import com.github.jonathanxd.kores.extra.UnifiedAnnotation;
+
+import java.lang.reflect.Type;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Reference to a method, at compile-time, if the method doesn't exists, the compilation will fail
@@ -43,21 +49,23 @@ public interface UnifiedMethodRef extends UnifiedAnnotation {
      *
      * @return Method class.
      */
-    CodeType value();
+    Type value();
 
     /**
      * Method return type.
      *
      * @return Method return type.
      */
-    CodeType returnType();
+    @Opt
+    Optional<Type> returnType();
 
     /**
      * Method parameter types.
      *
      * @return Method parameter types.
      */
-    CodeType[] parameterTypes();
+    @Opt(DefaultListTypeCheck.class)
+    OptObject<List<Type>> parameterTypes();
 
     /**
      * Name of the method.

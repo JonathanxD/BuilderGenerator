@@ -25,25 +25,51 @@
  *      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *      THE SOFTWARE.
  */
-package com.github.jonathanxd.buildergenerator.unification;
+package com.github.jonathanxd.buildergenerator.test.bd;
 
-import com.github.jonathanxd.kores.extra.UnifiedAnnotation;
+import com.github.jonathanxd.buildergenerator.annotation.GenBuilder;
 
-/**
- * Default method marker. Some JVM Languages does not compile interface methods with default
- * implementations to Java 8 {@code default} methods. This annotation marks the method as default
- * method and provide the target method to invoke. The method may be static and have a receiver
- * parameter and a value parameter and return type of the same type of the annotated method, to
- * invoke local methods (instance methods) add {@code :} to the start of method name, example:
- * {@code :fooBar}.
- */
-public interface UnifiedDefaultImpl extends UnifiedAnnotation {
+import java.lang.reflect.Type;
+import java.util.List;
+import java.util.Set;
 
-    /**
-     * Target method to invoke.
-     *
-     * @return Target method to invoke.
-     */
-    UnifiedMethodRef value();
+@GenBuilder
+public class PersonImpl implements Person {
+    private final String name;
+    private final int age;
+    private final Person.Image image;
+    private final Set<? extends Person> parents;
+    private final Type type;
 
+    public PersonImpl(String name, int age, Person.Image image, Set<? extends Person> parents, Type type) {
+        this.name = name;
+        this.age = age;
+        this.image = image;
+        this.parents = parents;
+        this.type = type;
+    }
+
+    @Override
+    public String getName() {
+        return this.name;
+    }
+
+    @Override
+    public int getAge() {
+        return this.age;
+    }
+
+    @Override
+    public Person.Image getImage() {
+        return this.image;
+    }
+
+    @Override
+    public Set<? extends Person> getParents() {
+        return this.parents;
+    }
+
+    public Type getType() {
+        return this.type;
+    }
 }

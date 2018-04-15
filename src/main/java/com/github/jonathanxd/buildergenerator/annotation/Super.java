@@ -25,25 +25,42 @@
  *      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *      THE SOFTWARE.
  */
-package com.github.jonathanxd.buildergenerator.unification;
+package com.github.jonathanxd.buildergenerator.annotation;
 
-import com.github.jonathanxd.kores.extra.UnifiedAnnotation;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * Default method marker. Some JVM Languages does not compile interface methods with default
- * implementations to Java 8 {@code default} methods. This annotation marks the method as default
- * method and provide the target method to invoke. The method may be static and have a receiver
- * parameter and a value parameter and return type of the same type of the annotated method, to
- * invoke local methods (instance methods) add {@code :} to the start of method name, example:
- * {@code :fooBar}.
+ * Invoke super method, the method must be implemented. This can be used instead of {@link
+ * Validator} to validate input values, but for this purpose, it is recommended to use {@link
+ * Super.Mode#PREPEND}.
+ *
+ * @since 1.1.0
  */
-public interface UnifiedDefaultImpl extends UnifiedAnnotation {
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface Super {
+    /**
+     * Mode of super invocation insertion.
+     *
+     * @return Mode of super invocation insertion.
+     */
+    Mode mode() default Mode.PREPEND;
 
     /**
-     * Target method to invoke.
-     *
-     * @return Target method to invoke.
+     * Mode of super invocation insertion.
      */
-    UnifiedMethodRef value();
+    enum Mode {
+        /**
+         * Append after property definition.
+         */
+        APPEND,
 
+        /**
+         * Append before property definition.
+         */
+        PREPEND
+    }
 }

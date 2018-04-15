@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -27,10 +27,11 @@
  */
 package com.github.jonathanxd.buildergenerator.apt;
 
-import com.github.jonathanxd.buildergenerator.CodeAPIBuilderGenerator;
-import com.github.jonathanxd.buildergenerator.annotation.Default;
+import com.github.jonathanxd.buildergenerator.KoresBuilderGenerator;
 import com.github.jonathanxd.buildergenerator.annotation.DefaultImpl;
+import com.github.jonathanxd.buildergenerator.annotation.DefaultUtil;
 import com.github.jonathanxd.buildergenerator.annotation.GenBuilder;
+import com.github.jonathanxd.buildergenerator.annotation.Inline;
 import com.github.jonathanxd.buildergenerator.annotation.PropertyInfo;
 import com.github.jonathanxd.buildergenerator.spec.BuilderSpec;
 import com.github.jonathanxd.buildergenerator.spec.MethodRefSpec;
@@ -45,26 +46,25 @@ import com.github.jonathanxd.buildergenerator.util.AnnotatedConstructUtil;
 import com.github.jonathanxd.buildergenerator.util.ExecutableElementsUtil;
 import com.github.jonathanxd.buildergenerator.util.FilerUtil;
 import com.github.jonathanxd.buildergenerator.util.TypeElementUtil;
-import com.github.jonathanxd.codeapi.base.MethodDeclaration;
-import com.github.jonathanxd.codeapi.base.TypeDeclaration;
-import com.github.jonathanxd.codeapi.builder.MethodDeclarationBuilder;
-import com.github.jonathanxd.codeapi.common.CodeModifier;
-import com.github.jonathanxd.codeapi.common.CodeParameter;
-import com.github.jonathanxd.codeapi.extra.AnnotationsKt;
-import com.github.jonathanxd.codeapi.keyword.Keyword;
-import com.github.jonathanxd.codeapi.keyword.Keywords;
-import com.github.jonathanxd.codeapi.type.CodeType;
-import com.github.jonathanxd.codeapi.type.GenericType;
-import com.github.jonathanxd.codeapi.util.CodeTypes;
-import com.github.jonathanxd.codeapi.util.Identity;
-import com.github.jonathanxd.codeapi.util.ModelCodeTypesKt;
-import com.github.jonathanxd.iutils.collection.CollectionUtils;
+import com.github.jonathanxd.iutils.collection.Collections3;
+import com.github.jonathanxd.iutils.object.Lazy;
 import com.github.jonathanxd.iutils.object.Pair;
+import com.github.jonathanxd.kores.base.KoresModifier;
+import com.github.jonathanxd.kores.base.KoresParameter;
+import com.github.jonathanxd.kores.base.MethodDeclaration;
+import com.github.jonathanxd.kores.base.TypeDeclaration;
+import com.github.jonathanxd.kores.extra.AnnotationsKt;
+import com.github.jonathanxd.kores.factory.Factories;
+import com.github.jonathanxd.kores.type.GenericType;
+import com.github.jonathanxd.kores.type.ImplicitKoresType;
+import com.github.jonathanxd.kores.type.KoresType;
+import com.github.jonathanxd.kores.type.ModelKoresTypesKt;
+import com.github.jonathanxd.kores.util.Identity;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.lang.reflect.Field;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -88,6 +88,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
 import javax.tools.FileObject;
 import javax.tools.JavaFileObject;
@@ -96,11 +97,12 @@ import kotlin.text.StringsKt;
 
 public class AnnotationProcessor extends AbstractProcessor {
 
-    private static final String BUILDER_GEN_ANNOTATION_CLASS = "com.github.jonathanxd.buildergenerator.annotation.GenBuilder";
-    private static final String PROPERTY_INFO_ANNOTATION_CLASS = "com.github.jonathanxd.buildergenerator.annotation.PropertyInfo";
-    private static final String INLINE_ANNOTATION_CLASS = "com.github.jonathanxd.buildergenerator.annotation.Inline";
-    private static final String DEFAULT_IMPL_ANNOTATION_CLASS = "com.github.jonathanxd.buildergenerator.annotation.DefaultImpl";
-    private static final Pattern FQ_REGEX = Pattern.compile("([\\p{L}_$][\\p{L}\\p{N}_$]*\\.)*[\\p{L}_$][\\p{L}\\p{N}_$]*");
+    private static final Type BUILDER_GEN_ANNOTATION_CLASS = GenBuilder.class;
+    private static final Type PROPERTY_INFO_ANNOTATION_CLASS = PropertyInfo.class;
+    private static final Type INLINE_ANNOTATION_CLASS = Inline.class;
+    private static final Type DEFAULT_IMPL_ANNOTATION_CLASS = DefaultImpl.class;
+    private static final Pattern FQ_REGEX = Pattern.compile(
+            "([\\p{L}_$][\\p{L}\\p{N}_$]*\\.)*[\\p{L}_$][\\p{L}\\p{N}_$]*");
 
     /**
      * Disables
@@ -110,11 +112,15 @@ public class AnnotationProcessor extends AbstractProcessor {
     private boolean generateSource = true;
     private ProcessingEnvironment processingEnvironment;
     private Messager messager;
+    private Lazy<Elements> elements = Lazy.lazy(() -> this.processingEnvironment.getElementUtils());
+    private Lazy<AnnotatedConstructUtil> annotatedConstructUtil = Lazy.lazy(() -> new AnnotatedConstructUtil(this.elements.get()));
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         this.processingEnvironment = processingEnv;
         this.messager = new BuilderGeneratorMessager(this.processingEnvironment.getMessager());
+        //this.elements = processingEnv.getElementUtils();
+        //this.annotatedConstructUtil = new AnnotatedConstructUtil(this.elements);
         Options.load(this.processingEnvironment.getOptions());
     }
 
@@ -126,18 +132,25 @@ public class AnnotationProcessor extends AbstractProcessor {
                 if (element.getKind() == ElementKind.METHOD) {
                     ExecutableElement executableElement = (ExecutableElement) element;
 
-                    UnifiedDefaultImpl annotation = AnnotatedConstructUtil
-                            .getUnifiedAnnotation(executableElement, DEFAULT_IMPL_ANNOTATION_CLASS, UnifiedDefaultImpl.class)
-                            .orElseThrow(() -> new IllegalStateException("Cannot find @DefaultImpl annotation"));
+                    UnifiedDefaultImpl annotation = annotatedConstructUtil.get()
+                            .getUnifiedAnnotation(executableElement, UnifiedDefaultImpl.class)
+                            /*AnnotatedConstructUtil
+                            .getUnifiedAnnotation(executableElement, DEFAULT_IMPL_ANNOTATION_CLASS,
+                                    UnifiedDefaultImpl.class, this.elements.get())*/
+                            .orElseThrow(() -> new IllegalStateException(
+                                    "Cannot find @DefaultImpl annotation"));
 
-                    if (!MethodRefValidator.validate(executableElement, annotation.value(), this.getMessager(), this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.DEFAULT_IMPL)) {
+                    if (!MethodRefValidator.validate(executableElement, annotation.value(),
+                            this.getMessager(), this.processingEnvironment.getElementUtils(),
+                            MethodRefValidator.VType.DEFAULT_IMPL)) {
                         return false;
                     }
 
 
                 }
             } catch (Throwable t) {
-                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "An error occurred '" + t.toString() + "'", element);
+                this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                        "An error occurred '" + t.toString() + "'", element);
                 t.printStackTrace(new MessagerPrint(this.getMessager()));
                 return false;
             }
@@ -148,39 +161,52 @@ public class AnnotationProcessor extends AbstractProcessor {
                 if (element.getKind() == ElementKind.METHOD) {
                     ExecutableElement executableElement = (ExecutableElement) element;
 
-                    if (AnnotatedConstructUtil.getUnifiedAnnotation(executableElement, DEFAULT_IMPL_ANNOTATION_CLASS, UnifiedDefaultImpl.class).isPresent()) {
-                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Methods annotated with @DefaultImpl are not eligible to be a property, remove @PropertyInfo or @DefaultImpl annotation.", executableElement);
+                    Optional<UnifiedDefaultImpl> defaultImplAnnotation =
+                            this.annotatedConstructUtil.get().getUnifiedAnnotation(executableElement, UnifiedDefaultImpl.class);
+
+                    if (defaultImplAnnotation.isPresent()) {
+                        this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                "Methods annotated with @DefaultImpl are not eligible to be a property, remove @PropertyInfo or @DefaultImpl annotation.",
+                                executableElement);
                         return false;
                     }
 
                     List<? extends VariableElement> parameters = executableElement.getParameters();
 
                     if (parameters.size() != 1) {
-                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Builder property method MUST have only one argument.", executableElement);
+                        this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                "Builder property method MUST have only one argument.",
+                                executableElement);
                         return false;
                     }
 
                     UnifiedPropertyInfo unifiedPropertyInfo =
-                            AnnotatedConstructUtil.getUnifiedAnnotation(executableElement, PROPERTY_INFO_ANNOTATION_CLASS, UnifiedPropertyInfo.class)
+                            this.annotatedConstructUtil.get()
+                                    .getUnifiedAnnotation(executableElement, UnifiedPropertyInfo.class)
                                     .orElseThrow(() -> new IllegalStateException("Cannot find @PropertyInfo annotation"));
 
                     UnifiedMethodRef defaultValue = unifiedPropertyInfo.defaultValue();
 
-                    if (!Default.isDefaultMethodRef(defaultValue)) {
+                    if (!DefaultUtil.isDefaultMethodRef(defaultValue)) {
 
-                        if (!MethodRefValidator.validate(executableElement, defaultValue, this.getMessager(), this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.DEFAULT_VALUE)) {
+                        if (!MethodRefValidator.validate(executableElement, defaultValue,
+                                this.getMessager(), this.processingEnvironment.getElementUtils(),
+                                MethodRefValidator.VType.DEFAULT_VALUE)) {
                             return false;
                         }
                     }
 
                     UnifiedValidator unifiedValidator = unifiedPropertyInfo.validator();
 
-                    if (!Default.isDefaultValidator(unifiedValidator)) {
+                    if (!DefaultUtil.isDefaultValidator(unifiedValidator)) {
 
                         UnifiedMethodRef methodRef = unifiedValidator.value();
 
-                        if (!Default.isDefaultMethodRef(methodRef)) {
-                            if (!MethodRefValidator.validate(executableElement, methodRef, this.getMessager(), this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.VALIDATOR)) {
+                        if (!DefaultUtil.isDefaultMethodRef(methodRef)) {
+                            if (!MethodRefValidator.validate(executableElement, methodRef,
+                                    this.getMessager(),
+                                    this.processingEnvironment.getElementUtils(),
+                                    MethodRefValidator.VType.VALIDATOR)) {
                                 return false;
                             }
                         }
@@ -188,7 +214,8 @@ public class AnnotationProcessor extends AbstractProcessor {
                     }
                 }
             } catch (Throwable t) {
-                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "An error occurred '" + t.toString() + "'", element);
+                this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                        "An error occurred '" + t.toString() + "'", element);
                 t.printStackTrace(new MessagerPrint(this.getMessager()));
                 return false;
             }
@@ -213,21 +240,23 @@ public class AnnotationProcessor extends AbstractProcessor {
                 }
 
                 if (moreArgs == null) {
-                    this.getMessager().printMessage(Diagnostic.Kind.ERROR, "At least one constructor is required!", element);
+                    this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                            "At least one constructor is required!", element);
                     return false;
                 }
 
                 genBuilderElements.add(Pair.of(moreArgs, element));
             } else {
-                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Invalid annotated element!", element);
+                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Invalid annotated element!",
+                        element);
                 return false;
             }
 
         }
 
         for (Pair<Element, Element> basePair : genBuilderElements) {
-            Element element = basePair._1();
-            Element annotatedElement = basePair._2();
+            Element element = basePair.getFirst();
+            Element annotatedElement = basePair.getSecond();
 
             try {
 
@@ -236,50 +265,60 @@ public class AnnotationProcessor extends AbstractProcessor {
                 if (isConstructor || element.getKind() == ElementKind.METHOD) {
                     ExecutableElement executableElement = (ExecutableElement) element;
 
-                    boolean isPublicStatic = !executableElement.getModifiers().contains(Modifier.PUBLIC) || !executableElement.getModifiers().contains(Modifier.STATIC);
+                    boolean isPublicStatic = !executableElement.getModifiers().contains(
+                            Modifier.PUBLIC) || !executableElement.getModifiers().contains(
+                            Modifier.STATIC);
 
                     if (!isConstructor && !isPublicStatic) {
-                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Factory method must be public and static.", annotatedElement);
+                        this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                "Factory method must be public and static.", annotatedElement);
                         return false;
                     }
 
                     Element enclosingElement = executableElement.getEnclosingElement();
 
                     if (!(enclosingElement instanceof TypeElement)) {
-                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Enclosing element of method must be a Type.", enclosingElement);
+                        this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                "Enclosing element of method must be a Type.", enclosingElement);
                         return false;
                     }
 
                     String builderQualifiedName = null;
-                    CodeType factoryClass = TypeElementUtil.toCodeType((TypeElement) enclosingElement);
-                    CodeType factoryResultType;
-                    CodeType baseType = null;
+                    KoresType factoryClass = TypeElementUtil.toKoresType((TypeElement) enclosingElement, this.elements.get());
+                    KoresType factoryResultType;
+                    KoresType baseType = null;
                     String factoryMethodName = null;
 
                     if (isConstructor) {
                         factoryResultType = factoryClass;
                     } else {
-                        baseType = TypeElementUtil.toCodeType(executableElement.getReturnType(), processingEnvironment.getElementUtils());
+                        baseType = TypeElementUtil.toKoresType(executableElement.getReturnType(),
+                                processingEnvironment.getElementUtils());
                         factoryResultType = baseType;
                         factoryMethodName = executableElement.getSimpleName().toString();
                     }
 
-                    Optional<UnifiedGenBuilder> mirrorOptional = AnnotatedConstructUtil.getUnifiedAnnotation(annotatedElement, BUILDER_GEN_ANNOTATION_CLASS, UnifiedGenBuilder.class);
+                    Optional<UnifiedGenBuilder> mirrorOptional =
+                            this.annotatedConstructUtil.get().getUnifiedAnnotation(annotatedElement, UnifiedGenBuilder.class);
 
                     if (mirrorOptional.isPresent()) {
 
                         UnifiedGenBuilder genBuilder = mirrorOptional.get();
-                        AnnotationMirror annotationMirror = (AnnotationMirror) AnnotationsKt.getHandlerOfAnnotation(genBuilder).getOriginal();
+                        AnnotationMirror annotationMirror =
+                                (AnnotationMirror) AnnotationsKt.getHandlerOfAnnotation(genBuilder).getOriginal();
 
-                        if (!Default.isDefaultType(genBuilder.base())) {
+                        if (!DefaultUtil.isDefaultType(genBuilder.base())) {
                             baseType = genBuilder.base();
                         } else {
                             List<? extends TypeMirror> interfaces = ((TypeElement) enclosingElement).getInterfaces();
 
                             if (interfaces.size() == 1) {
-                                baseType = TypeElementUtil.toCodeType(interfaces.get(0), processingEnvironment.getElementUtils());
+                                baseType = TypeElementUtil.toKoresType(interfaces.get(0),
+                                        processingEnvironment.getElementUtils());
                             } else {
-                                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Base type cannot be inferred, please specify the base type!", annotatedElement, annotationMirror);
+                                this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                        "Base type cannot be inferred, please specify the base type!",
+                                        annotatedElement, annotationMirror);
                                 return false;
                             }
                         }
@@ -287,20 +326,17 @@ public class AnnotationProcessor extends AbstractProcessor {
                         if (!genBuilder.qualifiedName().isEmpty()) {
                             String value = genBuilder.qualifiedName();
 
+                            boolean isMod = false;
 
-                            boolean isKeyword = false;
-                            for (Field field : Keywords.class.getDeclaredFields()) {
-
-                                if (Keyword.class.isAssignableFrom(field.getType())) {
-                                    try {
-                                        isKeyword |= value.equals(((Keyword) field.get(null)).getName());
-                                    } catch (IllegalAccessException ignored) {
-                                    }
-                                }
+                            for (KoresModifier mod : KoresModifier.values()) {
+                                isMod |= value.equals(mod.name());
                             }
 
-                            if (value.equals("null") || value.equals("true") || value.equals("false") || isKeyword || !FQ_REGEX.matcher(value).matches()) {
-                                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Invalid class name '" + value + "', the class name MUST match the java class naming rules (Java Language Specification, Section 3.8. Identifiers).", annotatedElement, annotationMirror);
+                            if (value.equals("null") || value.equals("true") || value.equals(
+                                    "false") || isMod || !FQ_REGEX.matcher(value).matches()) {
+                                this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                        "Invalid class name '" + value + "', the class name MUST match the java class naming rules (Java Language Specification, Section 3.8. Identifiers).",
+                                        annotatedElement, annotationMirror);
                                 return false;
                             }
 
@@ -312,20 +348,23 @@ public class AnnotationProcessor extends AbstractProcessor {
                     }
 
                     if (baseType == null) {
-                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Cannot determine base type.", annotatedElement);
+                        this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                "Cannot determine base type.", annotatedElement);
                         return false;
                     }
 
                     List<? extends VariableElement> parameters = executableElement.getParameters();
 
-                    List<Pair<String, CodeType>> propertyOrder = new ArrayList<>();
+                    List<Pair<String, KoresType>> propertyOrder = new ArrayList<>();
 
                     for (VariableElement parameter : parameters) {
-                        propertyOrder.add(Pair.of(parameter.getSimpleName().toString(), ModelCodeTypesKt.getCodeType(parameter.asType())));
+                        propertyOrder.add(Pair.of(parameter.getSimpleName().toString(),
+                                ModelKoresTypesKt.getKoresType(parameter.asType(), this.elements.get())));
                     }
 
 
-                    TypeElement baseTypeElement = processingEnvironment.getElementUtils().getTypeElement(baseType.getCanonicalName());
+                    TypeElement baseTypeElement = processingEnvironment.getElementUtils().getTypeElement(
+                            baseType.getCanonicalName());
 
                     TypeElement builder = null;
 
@@ -333,7 +372,8 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                     this.consumeMethods(baseTypeElement, e -> {
                         String name = e.getSimpleName().toString();
-                        if (executables.stream().noneMatch(elem -> elem.getSimpleName().toString().equals(name)))
+                        if (executables.stream().noneMatch(
+                                elem -> elem.getSimpleName().toString().equals(name)))
                             executables.add(e);
                     });
 
@@ -345,7 +385,9 @@ public class AnnotationProcessor extends AbstractProcessor {
                             if (innerClass.getSimpleName().contentEquals("Builder")) {
 
                                 if (innerClass.getKind() != ElementKind.INTERFACE) {
-                                    this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Invalid 'Builder' in base type '" + baseType + "': The 'Builder' must be an interface.", innerClass);
+                                    this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                            "Invalid 'Builder' in base type '" + baseType + "': The 'Builder' must be an interface.",
+                                            innerClass);
                                     return false;
                                 }
 
@@ -356,11 +398,13 @@ public class AnnotationProcessor extends AbstractProcessor {
                     }
 
                     if (builder == null) {
-                        this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Cannot find Builder class in base type '" + baseType + "'.", baseTypeElement);
+                        this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                "Cannot find Builder class in base type '" + baseType + "'.",
+                                baseTypeElement);
                         return false;
                     }
 
-                    CodeType builderType = TypeElementUtil.toCodeType(builder);
+                    KoresType builderType = TypeElementUtil.toKoresType(builder, this.elements.get());
 
                     List<MethodSpec> methodSpecs = new ArrayList<>();
                     List<ExecutableElement> builderMethods = new ArrayList<>();
@@ -370,20 +414,21 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                     String boundTypeName = null;
 
-                    CodeType bdType = ModelCodeTypesKt.getCodeTypeFromTypeParameters(builder);
+                    KoresType bdType = ModelKoresTypesKt.getKoresTypeFromTypeParameters(builder, this.elements.get());
 
                     if (bdType instanceof GenericType) {
                         GenericType genericType = (GenericType) bdType;
 
                         if (genericType.getBounds().length == 2) {
                             GenericType.Bound bound = genericType.getBounds()[1];
-                            CodeType boundType = bound.getType();
+                            KoresType boundType = bound.getType();
 
                             if (boundType instanceof GenericType) {
                                 GenericType bound_ = (GenericType) boundType;
 
                                 if (!bound_.isType() && bound_.getBounds().length == 1) {
-                                    if (bound_.getBounds()[0].getType().getCanonicalName().equals(builderType.getCanonicalName()))
+                                    if (bound_.getBounds()[0].getType().getCanonicalName().equals(
+                                            builderType.getCanonicalName()))
                                         boundTypeName = bound_.getName();
                                 }
                             }
@@ -392,29 +437,36 @@ public class AnnotationProcessor extends AbstractProcessor {
                     }
 
                     this.consumeMethods(builder, methodToConsume -> {
-                        Optional<UnifiedDefaultImpl> unifiedDefaultImplOpt = AnnotatedConstructUtil.getUnifiedAnnotation(methodToConsume, "com.github.jonathanxd.buildergenerator.annotation.DefaultImpl", UnifiedDefaultImpl.class);
+                        Optional<UnifiedDefaultImpl> unifiedDefaultImplOpt =
+                                this.annotatedConstructUtil.get().getUnifiedAnnotation(methodToConsume, UnifiedDefaultImpl.class);
 
                         if (methodToConsume.isDefault() || unifiedDefaultImplOpt.isPresent()) {
 
                             if (!methodToConsume.isDefault()) {
                                 UnifiedDefaultImpl unifiedDefault = unifiedDefaultImplOpt.get();
 
-                                List<CodeParameter> collect = methodToConsume
+                                List<KoresParameter> collect = methodToConsume
                                         .getParameters()
                                         .stream()
-                                        .map(o -> new CodeParameter(TypeElementUtil.fromGenericMirror(o.asType())/*TypeElementUtil.toCodeType(o.asType(), this.processingEnvironment.getElementUtils())*/, o.getSimpleName().toString()))
+                                        .map(o -> Factories.parameter(
+                                                TypeElementUtil.fromGenericMirror(o.asType(), this.elements.get()),
+                                                o.getSimpleName().toString()))
                                         .collect(Collectors.toList());
 
-                                CodeType rtype = TypeElementUtil.fromGenericMirror(methodToConsume.getReturnType());
+                                KoresType rtype = TypeElementUtil.fromGenericMirror(methodToConsume.getReturnType(),
+                                        this.elements.get());
 
-                                MethodDeclaration targetMethod = MethodDeclarationBuilder.builder()
-                                        .withModifiers(CodeModifier.PUBLIC)
-                                        .withName(methodToConsume.getSimpleName().toString())
-                                        .withReturnType(rtype)
-                                        .withParameters(collect)
+                                MethodDeclaration targetMethod = MethodDeclaration.Builder.builder()
+                                        .modifiers(KoresModifier.PUBLIC)
+                                        .name(methodToConsume.getSimpleName().toString())
+                                        .returnType(rtype)
+                                        .parameters(collect)
                                         .build();
 
-                                MethodRefSpec methodRefSpec = MethodRefValidator.get(methodToConsume, unifiedDefault.value(), this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.DEFAULT_IMPL);
+                                MethodRefSpec methodRefSpec = MethodRefValidator.get(
+                                        methodToConsume, unifiedDefault.value(),
+                                        this.processingEnvironment.getElementUtils(),
+                                        MethodRefValidator.VType.DEFAULT_IMPL);
 
                                 methodSpecs.add(new MethodSpec(targetMethod, methodRefSpec));
 
@@ -425,35 +477,45 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                     });
 
-                    for (Pair<String, CodeType> prop : propertyOrder) {
-                        String s = prop._1();
-                        CodeType propertyType = prop._2();
+                    for (Pair<String, KoresType> prop : propertyOrder) {
+                        String s = prop.getFirst();
+                        KoresType propertyType = prop.getSecond();
 
-                        Optional<ExecutableElement> optional = ExecutableElementsUtil.get(executables, "get" + StringsKt.capitalize(s));
-                        Optional<ExecutableElement> builderMethod = ExecutableElementsUtil.get(builderMethods, "with" + StringsKt.capitalize(s));
+                        Optional<ExecutableElement> optional = ExecutableElementsUtil.get(
+                                executables, "get" + StringsKt.capitalize(s));
+                        Optional<ExecutableElement> builderMethod = ExecutableElementsUtil.get(
+                                builderMethods, "with" + StringsKt.capitalize(s));
 
                         if (!optional.isPresent()) {
-                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Missing getter 'get" + StringsKt.capitalize(s) + "' method of property '" + s + "'.", baseTypeElement);
+                            this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                    "Missing getter 'get" + StringsKt.capitalize(s) + "' method of property '" + s + "'.",
+                                    baseTypeElement);
                             return false;
                         }
 
                         if (!builderMethod.isPresent()) {
-                            this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Missing Builder 'with" + StringsKt.capitalize(s) + "' method of property '" + s + "'.", builder);
+                            this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                    "Missing Builder 'with" + StringsKt.capitalize(s)
+                                            + "' method of property '" + s + "'.", builder);
                             return false;
                         }
 
                         ExecutableElement getter = optional.get();
                         ExecutableElement withMethod = builderMethod.get();
 
-                        /*GenericType propertyType = (GenericType) TypeElementUtil.toCodeType(getter.getReturnType(), this.processingEnvironment.getElementUtils());*/
+                        /*GenericType propertyType = (GenericType) TypeElementUtil.toKoresType(getter.getReturnType(), this.processingEnvironment.getElementUtils());*/
 
 
                         String simpleName = withMethod.getSimpleName().toString();
                         List<? extends VariableElement> params = withMethod.getParameters();
-                        CodeType parameterType = TypeElementUtil.toCodeType(params.get(0).asType(), this.processingEnvironment.getElementUtils());
-                        CodeType returnType = TypeElementUtil.toCodeType(withMethod.getReturnType(), this.processingEnvironment.getElementUtils());
+                        KoresType parameterType = TypeElementUtil.toKoresType(
+                                params.get(0).asType(),
+                                this.processingEnvironment.getElementUtils());
+                        KoresType returnType = TypeElementUtil.toKoresType(
+                                withMethod.getReturnType(),
+                                this.processingEnvironment.getElementUtils());
 
-                        CodeType type = propertyType;
+                        KoresType type = propertyType;
 
                         boolean any = false;
                         boolean isNullable = false;
@@ -475,8 +537,10 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                         if (!Options.isDisableStrictSetterCheck()) {
                             if (!Identity.nonStrictEq(parameterType, type)
-                                    || (boundTypeName == null && !Identity.nonStrictEq(returnType, builderType))
-                                    || (boundTypeName != null && !returnType.getCanonicalName().equals(boundTypeName))) {
+                                    || (boundTypeName == null && !Identity.nonStrictEq(returnType,
+                                    builderType))
+                                    || (boundTypeName != null && !returnType.getCanonicalName().equals(
+                                    boundTypeName))) {
                                 isValid = false;
                             }
                         }
@@ -493,7 +557,8 @@ public class AnnotationProcessor extends AbstractProcessor {
                                             + parameterType
                                             + ") and return type '"
                                             + builderType
-                                            + (boundTypeName != null ? " (or " + boundTypeName + ")" : "")
+                                            + (boundTypeName != null ? " (or " + boundTypeName + ")"
+                                                                     : "")
                                             + "' (current: "
                                             + returnType
                                             + ").", withMethod);
@@ -501,22 +566,27 @@ public class AnnotationProcessor extends AbstractProcessor {
                         } else {
 
 
-                            Optional<UnifiedPropertyInfo> unifiedPropertyInfoOpt = AnnotatedConstructUtil.getUnifiedAnnotation(withMethod, PROPERTY_INFO_ANNOTATION_CLASS, UnifiedPropertyInfo.class);
+                            Optional<UnifiedPropertyInfo> unifiedPropertyInfoOpt =
+                                    this.annotatedConstructUtil.get().getUnifiedAnnotation(withMethod, UnifiedPropertyInfo.class);
 
                             if (unifiedPropertyInfoOpt.isPresent()) {
 
-                                PropertySpec from = this.from(s, type, withMethod, unifiedPropertyInfoOpt.get(), isNullable, isOptional);
+                                PropertySpec from = this.from(s, type, withMethod,
+                                        unifiedPropertyInfoOpt.get(), isNullable, isOptional);
 
                                 String name = from.getDefaultsPropertyName();
 
                                 if (!name.equals(s)) {
 
-                                    Optional<ExecutableElement> propertyGetter = ExecutableElementsUtil.get(executables, "get" + StringsKt.capitalize(name));
+                                    Optional<ExecutableElement> propertyGetter = ExecutableElementsUtil.get(
+                                            executables, "get" + StringsKt.capitalize(name));
 
                                     if (!propertyGetter.isPresent()) {
                                         this.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                                "Specified property name '" + name + "' cannot be found!.", withMethod,
-                                                (AnnotationMirror) AnnotationsKt.getHandlerOfAnnotation(unifiedPropertyInfoOpt.get()).getOriginal());
+                                                "Specified property name '" + name + "' cannot be found!.",
+                                                withMethod,
+                                                (AnnotationMirror) AnnotationsKt.getHandlerOfAnnotation(
+                                                        unifiedPropertyInfoOpt.get()).getOriginal());
                                         return false;
                                     }
                                 }
@@ -528,31 +598,41 @@ public class AnnotationProcessor extends AbstractProcessor {
 
 
                         if (!any) {
-                            propertySpecs.add(new PropertySpec(s, s, type, ModelCodeTypesKt.getCodeType(withMethod.getParameters().get(0).asType()), isNullable, isOptional, null, null));
+                            propertySpecs.add(new PropertySpec(s, s, type,
+                                    ModelKoresTypesKt.getKoresType(withMethod.getParameters().get(0).asType(),
+                                            this.elements.get()),
+                                    isNullable,
+                                    isOptional, null, null));
                         }
 
                     }
 
-                    BuilderSpec builderSpec = new BuilderSpec(builderQualifiedName, factoryClass, factoryResultType, factoryMethodName, baseType, bdType, propertySpecs, methodSpecs);
+                    BuilderSpec builderSpec = new BuilderSpec(builderQualifiedName, factoryClass,
+                            factoryResultType, factoryMethodName, baseType, bdType, propertySpecs,
+                            methodSpecs);
 
 
                     if (!roundEnv.processingOver()) {
 
-                        CodeAPIBuilderGenerator.Source builderGenerator = new CodeAPIBuilderGenerator.Source();
+                        KoresBuilderGenerator.Source builderGenerator = new KoresBuilderGenerator.Source();
 
-                        Pair<TypeDeclaration, String> pair = builderGenerator.generate(builderSpec, methodTypeSpecs -> {
-                        });
+                        Pair<TypeDeclaration, String> pair = builderGenerator.generate(builderSpec,
+                                methodTypeSpecs -> {
+                                });
 
-                        TypeDeclaration declaration = pair._1();
+                        TypeDeclaration declaration = pair.getFirst();
 
-                        Optional<FileObject> fileObject = FilerUtil.get(this.processingEnvironment.getFiler(), declaration.getPackageName(), declaration.getSimpleName());
+                        Optional<FileObject> fileObject = FilerUtil.get(
+                                this.processingEnvironment.getFiler(), declaration.getPackageName(),
+                                declaration.getSimpleName());
 
                         fileObject.ifPresent(FileObject::delete);
 
                         String qualifiedName = declaration.getQualifiedName();
 
                         if (processedTypes.contains(qualifiedName)) {
-                            this.getMessager().printMessage(Diagnostic.Kind.WARNING, "Already processed!", annotatedElement);
+                            this.getMessager().printMessage(Diagnostic.Kind.WARNING,
+                                    "Already processed!", annotatedElement);
                         } else {
 
                             try {
@@ -564,21 +644,26 @@ public class AnnotationProcessor extends AbstractProcessor {
                                     origin = new Element[]{annotatedElement, element};
                                 }
 
-                                JavaFileObject classFile = processingEnvironment.getFiler().createSourceFile(qualifiedName, origin);
+                                JavaFileObject classFile = processingEnvironment.getFiler().createSourceFile(
+                                        qualifiedName, origin);
 
                                 OutputStream outputStream = classFile.openOutputStream();
 
-                                outputStream.write(pair._2().getBytes("UTF-8"));
+                                outputStream.write(pair.getSecond().getBytes("UTF-8"));
 
                                 outputStream.flush();
                                 outputStream.close();
 
                                 processedTypes.add(qualifiedName);
                             } catch (FilerException e) {
-                                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to create source file of Builder class '" + qualifiedName + "' (file already exists?): " + e.getMessage(), annotatedElement);
+                                this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                        "Failed to create source file of Builder class '" + qualifiedName + "' (file already exists?): " + e.getMessage(),
+                                        annotatedElement);
                                 throw new RuntimeException(e);
                             } catch (IOException e) {
-                                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to create source file of Builder class '" + qualifiedName + "': " + e.getMessage(), annotatedElement);
+                                this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                        "Failed to create source file of Builder class '" + qualifiedName + "': " + e.getMessage(),
+                                        annotatedElement);
                                 throw new RuntimeException(e);
                             }
                         }
@@ -586,7 +671,8 @@ public class AnnotationProcessor extends AbstractProcessor {
                     }
                 }
             } catch (Throwable t) {
-                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "An error occurred '" + t.toString() + "'", annotatedElement);
+                this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                        "An error occurred '" + t.toString() + "'", annotatedElement);
                 t.printStackTrace(new MessagerPrint(this.getMessager()));
                 return false;
             }
@@ -595,23 +681,34 @@ public class AnnotationProcessor extends AbstractProcessor {
         return false;
     }
 
-    private PropertySpec from(String name, CodeType type, ExecutableElement annotated, UnifiedPropertyInfo unifiedPropertyInfo, boolean isNullable_, boolean isOptional) {
+    private PropertySpec from(String name, KoresType type, ExecutableElement annotated,
+                              UnifiedPropertyInfo unifiedPropertyInfo, boolean isNullable_,
+                              boolean isOptional) {
 
 
         boolean isNullable = isNullable_ || unifiedPropertyInfo.isNullable();
 
-        String defaultsPropertyName = Default.stringOptional(unifiedPropertyInfo.defaultsPropertyName()).orElse(name);
+        String defaultsPropertyName = DefaultUtil.stringOptional(
+                unifiedPropertyInfo.defaultsPropertyName()).orElse(name);
 
-        MethodRefSpec defaultValue = Default.methodRefOptional(unifiedPropertyInfo.defaultValue())
-                .map(annotation -> MethodRefValidator.get(annotated, annotation, this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.DEFAULT_VALUE))
+        MethodRefSpec defaultValue = DefaultUtil.methodRefOptional(
+                unifiedPropertyInfo.defaultValue())
+                .map(annotation -> MethodRefValidator.get(annotated, annotation,
+                        this.processingEnvironment.getElementUtils(),
+                        MethodRefValidator.VType.DEFAULT_VALUE))
                 .orElse(null);
 
 
-        MethodRefSpec validator = Default.methodRefOptional(unifiedPropertyInfo.validator().value())
-                .map(annotation -> MethodRefValidator.get(annotated, annotation, this.processingEnvironment.getElementUtils(), MethodRefValidator.Type.VALIDATOR))
+        MethodRefSpec validator = DefaultUtil.methodRefOptional(
+                unifiedPropertyInfo.validator().value())
+                .map(annotation -> MethodRefValidator.get(annotated, annotation,
+                        this.processingEnvironment.getElementUtils(),
+                        MethodRefValidator.VType.VALIDATOR))
                 .orElse(null);
 
-        return new PropertySpec(name, defaultsPropertyName, type, ModelCodeTypesKt.getCodeType(annotated.getParameters().get(0).asType()), isNullable, isOptional, defaultValue, validator);
+        return new PropertySpec(name, defaultsPropertyName, type,
+                ModelKoresTypesKt.getKoresType(annotated.getParameters().get(0).asType(), this.elements.get()),
+                isNullable, isOptional, defaultValue, validator);
 
     }
 
@@ -626,24 +723,31 @@ public class AnnotationProcessor extends AbstractProcessor {
 
         List<Runnable> later = new ArrayList<>();
 
-        if (superclass.getKind() != TypeKind.NONE && !superclass.toString().equals("java.lang.Object")) {
-            TypeElement element = TypeElementUtil.toTypeElement(superclass, processingEnvironment.getElementUtils());
+        if (superclass.getKind() != TypeKind.NONE && !superclass.toString().equals(
+                "java.lang.Object")) {
+            TypeElement element = TypeElementUtil.toTypeElement(superclass,
+                    processingEnvironment.getElementUtils());
 
             if (element == null) {
-                this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Cannot find super class '" + superclass.toString() + "'!", typeElement);
+                this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                        "Cannot find super class '" + superclass.toString() + "'!", typeElement);
                 return;
             }
 
-            later.add(() -> consumeMethods(processingEnvironment.getElementUtils().getTypeElement(superclass.toString()), consumer));
+            later.add(() -> consumeMethods(
+                    processingEnvironment.getElementUtils().getTypeElement(superclass.toString()),
+                    consumer));
         }
 
         for (TypeMirror itf : typeElement.getInterfaces()) {
 
             if (itf.getKind() != TypeKind.NONE) {
-                TypeElement element = TypeElementUtil.toTypeElement(itf, processingEnvironment.getElementUtils());
+                TypeElement element = TypeElementUtil.toTypeElement(itf,
+                        processingEnvironment.getElementUtils());
 
                 if (element == null) {
-                    this.getMessager().printMessage(Diagnostic.Kind.ERROR, "Cannot find interface '" + itf.toString() + "'!", typeElement);
+                    this.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                            "Cannot find interface '" + itf.toString() + "'!", typeElement);
                     return;
                 }
 
@@ -661,7 +765,12 @@ public class AnnotationProcessor extends AbstractProcessor {
 
     @Override
     public Set<String> getSupportedAnnotationTypes() {
-        return CollectionUtils.setOf(BUILDER_GEN_ANNOTATION_CLASS, INLINE_ANNOTATION_CLASS, PROPERTY_INFO_ANNOTATION_CLASS, DEFAULT_IMPL_ANNOTATION_CLASS);
+        return Collections3.setOf(BUILDER_GEN_ANNOTATION_CLASS, INLINE_ANNOTATION_CLASS,
+                PROPERTY_INFO_ANNOTATION_CLASS,
+                DEFAULT_IMPL_ANNOTATION_CLASS)
+                .stream()
+                .map(ImplicitKoresType::getCanonicalName)
+                .collect(Collectors.toSet());
     }
 
     private Messager getMessager() {
@@ -673,7 +782,6 @@ public class AnnotationProcessor extends AbstractProcessor {
         public MessagerPrint(Messager messager) {
             super(new MessagerOutStream(messager));
         }
-
 
     }
 

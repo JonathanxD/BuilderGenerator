@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -27,7 +27,7 @@
  */
 package com.github.jonathanxd.buildergenerator.spec;
 
-import com.github.jonathanxd.codeapi.type.CodeType;
+import com.github.jonathanxd.kores.type.KoresType;
 
 import java.util.List;
 import java.util.Optional;
@@ -45,12 +45,12 @@ public final class BuilderSpec {
     /**
      * Factory class.
      */
-    private final CodeType factoryClass;
+    private final KoresType factoryClass;
 
     /**
      * Factory result type (base class implementation/builder result)
      */
-    private final CodeType factoryResultType;
+    private final KoresType factoryResultType;
 
     /**
      * Name of the factory method.
@@ -60,12 +60,12 @@ public final class BuilderSpec {
     /**
      * Base class.
      */
-    private final CodeType baseClass;
+    private final KoresType baseClass;
 
     /**
      * Builder base class (inner class of base class)
      */
-    private final CodeType builderBaseClass;
+    private final KoresType builderBaseClass;
 
     /**
      * Properties to generate builder.
@@ -88,7 +88,7 @@ public final class BuilderSpec {
      * @param properties           Properties to generate builder.
      * @param methodSpecs          Non-property method specification.
      */
-    public BuilderSpec(String builderQualifiedName, CodeType factoryClass, CodeType factoryResultType, String factoryMethodName, CodeType baseClass, CodeType builderBaseClass, List<PropertySpec> properties, List<MethodSpec> methodSpecs) {
+    public BuilderSpec(String builderQualifiedName, KoresType factoryClass, KoresType factoryResultType, String factoryMethodName, KoresType baseClass, KoresType builderBaseClass, List<PropertySpec> properties, List<MethodSpec> methodSpecs) {
         this.builderQualifiedName = builderQualifiedName;
         this.factoryClass = factoryClass;
         this.factoryResultType = factoryResultType;
@@ -113,7 +113,7 @@ public final class BuilderSpec {
      *
      * @return Factory class.
      */
-    public CodeType getFactoryClass() {
+    public KoresType getFactoryClass() {
         return this.factoryClass;
     }
 
@@ -122,7 +122,7 @@ public final class BuilderSpec {
      *
      * @return Factory result type/builder result/base class implementation.
      */
-    public CodeType getFactoryResultType() {
+    public KoresType getFactoryResultType() {
         return this.factoryResultType;
     }
 
@@ -141,7 +141,7 @@ public final class BuilderSpec {
      *
      * @return Base class.
      */
-    public CodeType getBaseClass() {
+    public KoresType getBaseClass() {
         return this.baseClass;
     }
 
@@ -150,7 +150,7 @@ public final class BuilderSpec {
      *
      * @return 'Builder' base class (inner class of base class)..
      */
-    public CodeType getBuilderBaseClass() {
+    public KoresType getBuilderBaseClass() {
         return this.builderBaseClass;
     }
 

@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -27,17 +27,20 @@
  */
 package com.github.jonathanxd.buildergenerator.util;
 
-import com.github.jonathanxd.codeapi.type.CodeType;
-import com.github.jonathanxd.codeapi.type.GenericType;
+import com.github.jonathanxd.kores.type.GenericType;
+import com.github.jonathanxd.kores.type.KoresTypes;
+
+import java.lang.reflect.Type;
 
 public class CTypeUtil {
 
-    public static CodeType resolve(CodeType codeType) {
+    public static Type resolve(Type koresType) {
+        koresType = KoresTypes.getKoresType(koresType);
 
-        while (codeType instanceof GenericType)
-            codeType = ((GenericType) codeType).getCodeType();
+        while (koresType instanceof GenericType)
+            koresType = ((GenericType) koresType).getResolvedType();
 
-        return codeType;
+        return koresType;
 
     }
 

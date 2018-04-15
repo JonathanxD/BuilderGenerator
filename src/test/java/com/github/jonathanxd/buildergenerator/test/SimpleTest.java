@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -28,15 +28,14 @@
 package com.github.jonathanxd.buildergenerator.test;
 
 import com.google.common.truth.FailureStrategy;
+import com.google.testing.compile.CompileTester;
 import com.google.testing.compile.JavaFileObjects;
 import com.google.testing.compile.JavaSourcesSubjectFactory;
 
 import com.github.jonathanxd.buildergenerator.apt.AnnotationProcessor;
-import com.github.jonathanxd.iutils.collection.CollectionUtils;
+import com.github.jonathanxd.iutils.collection.Collections3;
 
 import org.junit.Test;
-
-import java.util.Set;
 
 import javax.tools.JavaFileObject;
 
@@ -50,7 +49,7 @@ public class SimpleTest {
     public void test() {
         JavaSourcesSubjectFactory.javaSources()
                 .getSubject(new Fail(),
-                        CollectionUtils.listOf(INTERFACE, IMPL))
+                        Collections3.listOf(INTERFACE, IMPL))
                 .withCompilerOptions("-Ajonathanxd.buildergenerator.throwExceptions=true")
                 .processedWith(new AnnotationProcessor())
                 .compilesWithoutError();

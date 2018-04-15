@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -31,28 +31,28 @@ import com.github.jonathanxd.buildergenerator.annotation.DefaultImpl;
 import com.github.jonathanxd.buildergenerator.annotation.MethodRef;
 import com.github.jonathanxd.buildergenerator.annotation.PropertyInfo;
 import com.github.jonathanxd.buildergenerator.annotation.Validator;
-import com.github.jonathanxd.codeapi.extra.UnifiedAnnotation;
+import com.github.jonathanxd.kores.extra.UnifiedAnnotation;
 
 /**
  * Marks the {@link Validator} or {@link MethodRef} to be inlined.
  *
  * This operation depends on the implementation of the {@link com.github.jonathanxd.buildergenerator.BuilderGenerator},
- * the default generator will require that method return a {@link com.github.jonathanxd.codeapi.CodePart}.
+ * the default generator will require that method return a {@link com.github.jonathanxd.kores.Instruction}.
  *
  * For {@link PropertyInfo#validator()} and {@link PropertyInfo#defaultValue()} a parameter of type
- * {@link com.github.jonathanxd.codeapi.base.VariableBase} is required, this parameter is the {@code
+ * {@link com.github.jonathanxd.kores.base.VariableBase} is required, this parameter is the {@code
  * property info}
  *
  * For {@link PropertyInfo#validator()}, a second parameter is required, this parameter must be of
- * {@link com.github.jonathanxd.codeapi.CodePart} type, this parameter is the access to value to
+ * {@link com.github.jonathanxd.kores.Instruction} type, this parameter is the access to value to
  * validate.
  *
  * For {@link PropertyInfo#defaultValue()} no additional parameters is required.
  *
  * For {@link DefaultImpl#value()} two parameters are required, first is the {@code annotatedMethod}
- * and the type is {@link com.github.jonathanxd.codeapi.base.MethodDeclaration}, the second is
+ * and the type is {@link com.github.jonathanxd.kores.base.MethodDeclaration}, the second is
  * {@code parameters}, the type is a {@link java.util.List} of {@link
- * com.github.jonathanxd.codeapi.CodePart}.
+ * com.github.jonathanxd.kores.Instruction}.
  *
  * Note: This annotation only works for compiled methods, {@link com.github.jonathanxd.buildergenerator.apt.MethodRefValidator}
  * will throw a exception if a non-compiled method is referenced from a {@link MethodRef}

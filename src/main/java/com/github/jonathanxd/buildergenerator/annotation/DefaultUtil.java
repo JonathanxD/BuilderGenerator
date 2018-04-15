@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -30,30 +30,33 @@ package com.github.jonathanxd.buildergenerator.annotation;
 import com.github.jonathanxd.buildergenerator.unification.UnifiedDefaultImpl;
 import com.github.jonathanxd.buildergenerator.unification.UnifiedMethodRef;
 import com.github.jonathanxd.buildergenerator.unification.UnifiedValidator;
-import com.github.jonathanxd.codeapi.CodeAPI;
-import com.github.jonathanxd.codeapi.base.Annotation;
-import com.github.jonathanxd.codeapi.type.CodeType;
+import com.github.jonathanxd.iutils.object.Default;
+import com.github.jonathanxd.kores.base.Annotation;
+import com.github.jonathanxd.kores.type.ImplicitKoresType;
+import com.github.jonathanxd.kores.type.KoresType;
+import com.github.jonathanxd.kores.type.KoresTypes;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.Type;
 import java.util.Optional;
 
-public final class Default {
-    private static final CodeType DEFAULT = CodeAPI.getJavaType(Default.class);
+public final class DefaultUtil {
+    private static final KoresType DEFAULT = KoresTypes.getKoresType(Default.class);
 
-    private Default() {
+    private DefaultUtil() {
         throw new IllegalStateException();
     }
 
 
     /**
-     * Returns true if {@code codeType} is default.
+     * Returns true if {@code KoresType} is default.
      *
-     * @param codeType Type.
-     * @return True if {@code codeType} is default.
+     * @param KoresType Type.
+     * @return True if {@code KoresType} is default.
      */
-    public static boolean isDefaultType(CodeType codeType) {
-        return codeType.is(Default.DEFAULT);
+    public static boolean isDefaultType(Type KoresType) {
+        return ImplicitKoresType.is(KoresType, DefaultUtil.DEFAULT);
     }
 
     /**
@@ -63,7 +66,7 @@ public final class Default {
      * @return True if {@code validator} is default.
      */
     public static boolean isDefault(Validator validator) {
-        return validator.value().value() == Default.class;
+        return ImplicitKoresType.is(validator.value().value(), Default.class);
     }
 
     /**
@@ -73,7 +76,7 @@ public final class Default {
      * @return True if {@code methodRef} is default.
      */
     public static boolean isDefault(MethodRef methodRef) {
-        return methodRef.value() == Default.class;
+        return ImplicitKoresType.is(methodRef.value(), Default.class);
     }
 
     /**
@@ -83,7 +86,7 @@ public final class Default {
      * @return True if {@code methodRef} annotation is default.
      */
     public static boolean isDefaultMethodRef(Annotation methodRef) {
-        return ((CodeType) methodRef.getValues().get("value")).is(CodeAPI.getJavaType(Default.class));
+        return ((KoresType) methodRef.getValues().get("value")).isIdEq(Default.class);
     }
 
     /**
@@ -93,7 +96,7 @@ public final class Default {
      * @return True if {@code methodRef} annotation is default.
      */
     public static boolean isDefaultMethodRef(UnifiedMethodRef methodRef) {
-        return methodRef.value().is(CodeAPI.getJavaType(Default.class));
+        return ImplicitKoresType.is(methodRef.value(), Default.class);
     }
 
     /**
@@ -136,8 +139,9 @@ public final class Default {
         return isDefaultMethodRef(validator.value());
     }
 
-    public static Optional<UnifiedMethodRef> methodRefOptional(@NotNull UnifiedMethodRef unifiedMethodRef) {
-        if(isDefaultMethodRef(unifiedMethodRef))
+    public static Optional<UnifiedMethodRef> methodRefOptional(
+            @NotNull UnifiedMethodRef unifiedMethodRef) {
+        if (isDefaultMethodRef(unifiedMethodRef))
             return Optional.empty();
 
         return Optional.of(unifiedMethodRef);
@@ -145,7 +149,7 @@ public final class Default {
 
     public static Optional<String> stringOptional(@NotNull String s) {
 
-        if(s.isEmpty())
+        if (s.isEmpty())
             return Optional.empty();
 
         return Optional.of(s);

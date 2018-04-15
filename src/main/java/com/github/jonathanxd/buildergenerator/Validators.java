@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -28,23 +28,24 @@
 package com.github.jonathanxd.buildergenerator;
 
 import com.github.jonathanxd.buildergenerator.annotation.Inline;
-import com.github.jonathanxd.codeapi.CodeAPI;
-import com.github.jonathanxd.codeapi.CodePart;
-import com.github.jonathanxd.codeapi.base.Concat;
-import com.github.jonathanxd.codeapi.base.ThrowException;
-import com.github.jonathanxd.codeapi.base.VariableBase;
-import com.github.jonathanxd.codeapi.helper.ConcatHelper;
-import com.github.jonathanxd.codeapi.literal.Literals;
-import com.github.jonathanxd.codeapi.operator.Operators;
+import com.github.jonathanxd.kores.Instruction;
+import com.github.jonathanxd.kores.Instructions;
+import com.github.jonathanxd.kores.base.Concat;
+import com.github.jonathanxd.kores.base.ThrowException;
+import com.github.jonathanxd.kores.base.VariableBase;
+import com.github.jonathanxd.kores.factory.Factories;
+import com.github.jonathanxd.kores.factory.InvocationFactory;
+import com.github.jonathanxd.kores.helper.ConcatHelper;
+import com.github.jonathanxd.kores.literal.Literals;
+import com.github.jonathanxd.kores.operator.Operators;
 
 import java.util.Collections;
 
 /**
  * Default validators.
  *
- * All validators here are {@link Inline} to avoid dependency on {@code BytecodeGenerator}. This
- * means that you don't need to have {@code BytecodeGenerator} in class path even you reference
- * these methods from {@link com.github.jonathanxd.buildergenerator.annotation.MethodRef}.
+ * All validators here are {@link Inline} to avoid dependency on {@code BytecodeGenerator}. This means that you don't need to have
+ * {@code BytecodeGenerator} in class path even you reference these methods from {@link com.github.jonathanxd.buildergenerator.annotation.MethodRef}.
  */
 public final class Validators {
     private Validators() {
@@ -67,7 +68,7 @@ public final class Validators {
      * @param propertyInfo Property info.
      */
     @Inline
-    public static CodePart positiveInt(VariableBase propertyInfo, CodePart input) {
+    public static Instruction positiveInt(VariableBase propertyInfo, Instruction input) {
 
         Concat message = ConcatHelper.builder("The input integer '")
                 .concat(input)
@@ -76,14 +77,14 @@ public final class Validators {
                 .concat("' must be positive.")
                 .build();
 
-        ThrowException throwException = CodeAPI.throwException(
-                CodeAPI.invokeConstructor(CodeAPI.getJavaType(IllegalArgumentException.class), CodeAPI.constructorTypeSpec(String.class),
+        ThrowException throwException = Factories.throwException(
+                InvocationFactory.invokeConstructor(IllegalArgumentException.class, Factories.constructorTypeSpec(String.class),
                         Collections.singletonList(message)
                 )
         );
 
-        return CodeAPI.ifStatement(CodeAPI.ifExprs(CodeAPI.check(input, Operators.LESS_THAN, Literals.INT(0))),
-                CodeAPI.source(
+        return Factories.ifStatement(Factories.ifExprs(Factories.check(input, Operators.LESS_THAN, Literals.INT(0))),
+                Instructions.fromPart(
                         throwException
                 ));
 

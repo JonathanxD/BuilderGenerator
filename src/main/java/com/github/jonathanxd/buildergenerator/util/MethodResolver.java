@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -32,16 +32,17 @@ import com.github.jonathanxd.buildergenerator.annotation.PropertyInfo;
 import com.github.jonathanxd.buildergenerator.spec.MethodRefSpec;
 import com.github.jonathanxd.buildergenerator.spec.MethodSpec;
 import com.github.jonathanxd.buildergenerator.spec.PropertySpec;
-import com.github.jonathanxd.codeapi.CodeAPI;
-import com.github.jonathanxd.codeapi.CodePart;
-import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
-import com.github.jonathanxd.codeapi.type.CodeType;
-import com.github.jonathanxd.codeapi.type.LoadedCodeType;
-import com.github.jonathanxd.codeapi.util.CodeTypes;
-import com.github.jonathanxd.iutils.type.TypeInfo;
+import com.github.jonathanxd.iutils.type.TypeUtil;
+import com.github.jonathanxd.kores.Instruction;
+import com.github.jonathanxd.kores.common.MethodTypeSpec;
+import com.github.jonathanxd.kores.type.ImplicitKoresType;
+import com.github.jonathanxd.kores.type.KoresType;
+import com.github.jonathanxd.kores.type.KoresTypes;
+import com.github.jonathanxd.kores.type.LoadedKoresType;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -61,8 +62,7 @@ public final class MethodResolver {
      * Resolve the {@link PropertyInfo#validator()} method.
      *
      * @param propertySpec Property specification.
-     * @return {@link Optional} of the validator invoker, or an empty {@link Optional} if the method
-     * cannot be found.
+     * @return {@link Optional} of the validator invoker, or an empty {@link Optional} if the method cannot be found.
      */
     public static Optional<InlineMethodInvoker> resolveValidator(PropertySpec propertySpec) {
         return MethodResolver.resolve(propertySpec::getValidatorSpec);
@@ -72,8 +72,7 @@ public final class MethodResolver {
      * Resolve the {@link PropertyInfo#defaultValue()} method.
      *
      * @param propertySpec Property specification.
-     * @return {@link Optional} of the default value invoker, or an empty {@link Optional} if the
-     * method cannot be found.
+     * @return {@link Optional} of the default value invoker, or an empty {@link Optional} if the method cannot be found.
      */
     public static Optional<InlineMethodInvoker> resolveDefaultMethod(PropertySpec propertySpec) {
         return MethodResolver.resolve(propertySpec::getDefaultValueSpec);
@@ -83,8 +82,7 @@ public final class MethodResolver {
      * Resolve the {@link com.github.jonathanxd.buildergenerator.annotation.DefaultImpl#value()} method.
      *
      * @param methodSpec Method specification.
-     * @return {@link Optional} of the default implementation invoker, or an empty {@link Optional} if the method
-     * cannot be found.
+     * @return {@link Optional} of the default implementation invoker, or an empty {@link Optional} if the method cannot be found.
      */
     public static Optional<InlineMethodInvoker> resolveDefaultImpl(MethodSpec methodSpec) {
         return MethodResolver.resolve(methodSpec::getDefaultMethod);
@@ -95,8 +93,7 @@ public final class MethodResolver {
      * Resolve the {@link Inline inlinable} and returns the invoker of the method.
      *
      * @param supplier Provider of {@link MethodRefSpec inlinable method specification}.
-     * @return {@link Optional} of the inline method invoker, or an empty {@link Optional} if the
-     * method cannot be found.
+     * @return {@link Optional} of the inline method invoker, or an empty {@link Optional} if the method cannot be found.
      */
     public static Optional<InlineMethodInvoker> resolve(Supplier<Optional<MethodRefSpec>> supplier) {
         Optional<MethodRefSpec> validatorSpec = supplier.get();
@@ -106,12 +103,9 @@ public final class MethodResolver {
 
         Optional<Method> resolve = resolve(validatorSpec.get());
 
-        if (!resolve.isPresent())
-            return Optional.empty();
-
-        return Optional.of((args) -> {
+        return resolve.map(method -> (args) -> {
             try {
-                return (CodePart) resolve.get().invoke(null, args);
+                return (Instruction) method.invoke(null, args);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -124,12 +118,11 @@ public final class MethodResolver {
      * Resolves the {@link Method} instance from {@link MethodTypeSpec}.
      *
      * @param methodRefSpec Method specification.
-     * @return {@link Optional} of the found {@link Method}, or empty {@link Optional} if method
-     * cannot be found.
+     * @return {@link Optional} of the found {@link Method}, or empty {@link Optional} if method cannot be found.
      */
     public static Optional<Method> resolve(MethodRefSpec methodRefSpec) {
 
-        if(!methodRefSpec.isInline())
+        if (!methodRefSpec.isInline())
             return Optional.empty();
 
         MethodTypeSpec methodTypeSpec = methodRefSpec.getMethodTypeSpec();
@@ -137,10 +130,12 @@ public final class MethodResolver {
         Class<?> localization = MethodResolver.getClassOrNull(methodTypeSpec.getLocalization());
         String methodName = methodTypeSpec.getMethodName();
         Class<?> returnType = MethodResolver.getClassOrNull(methodTypeSpec.getTypeSpec().getReturnType());
-        Class<?>[] parameterTypes = methodTypeSpec.getTypeSpec().getParameterTypes().stream().map(MethodResolver::getClassOrNull).toArray(Class[]::new);
+        Class<?>[] parameterTypes = methodTypeSpec.getTypeSpec().getParameterTypes().stream().map(
+                MethodResolver::getClassOrNull).toArray(Class[]::new);
 
         if (localization == null || returnType == null || ArraysKt.any(parameterTypes, Objects::isNull))
-            throw new IllegalArgumentException("Failed to find runtime types of inline method! MethodSpec: '"+methodTypeSpec.toMethodString()+"'!");
+            throw new IllegalArgumentException(
+                    "Failed to find runtime types of inline method! MethodSpec: '" + methodTypeSpec.toMethodString() + "'!");
 
         try {
             Method m = localization.getDeclaredMethod(methodName, parameterTypes);
@@ -150,31 +145,31 @@ public final class MethodResolver {
 
             return Optional.of(m);
         } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException("Failed to find inline method! MethodSpec: '"+methodTypeSpec.toMethodString()+"'!", e);
+            throw new IllegalArgumentException(
+                    "Failed to find inline method! MethodSpec: '" + methodTypeSpec.toMethodString() + "'!", e);
         }
 
     }
 
     /**
-     * Gets {@link Class} instance from {@link CodeType}.
+     * Gets {@link Class} instance from {@link KoresType}.
      *
-     * @param codeType Type to extract {@link Class} instance.
-     * @return {@link Class} instance if the {@link CodeType} is an {@link LoadedCodeType}, null
-     * otherwise.
+     * @param koresType Type to extract {@link Class} instance.
+     * @return {@link Class} instance if the {@link KoresType} is an {@link LoadedKoresType}, null otherwise.
      */
-    private static Class<?> getClassOrNull(CodeType codeType) {
+    private static Class<?> getClassOrNull(Type koresType) {
 
-        codeType = CodeTypes.getConcreteType(codeType);
+        koresType = KoresTypes.getConcreteType(KoresTypes.getKoresType(koresType));
 
-        if (!(codeType instanceof LoadedCodeType<?>)) {
+        if (!(koresType instanceof LoadedKoresType<?>)) {
             try {
-                codeType = CodeAPI.getJavaType(TypeInfo.resolveClass(codeType.getCanonicalName()));
-            }catch (Throwable ignored) {
+                return TypeUtil.resolveClass(ImplicitKoresType.getCanonicalName(koresType));
+            } catch (Throwable ignored) {
                 return null;
             }
         }
 
-        return ((LoadedCodeType<?>) codeType).getLoadedType();
+        return ((LoadedKoresType<?>) koresType).getLoadedType();
     }
 
 }

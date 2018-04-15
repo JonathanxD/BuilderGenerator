@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -28,7 +28,7 @@
 package com.github.jonathanxd.buildergenerator.unification;
 
 import com.github.jonathanxd.buildergenerator.annotation.Inline;
-import com.github.jonathanxd.codeapi.extra.UnifiedAnnotation;
+import com.github.jonathanxd.kores.extra.UnifiedAnnotation;
 
 /**
  * Specify the validator method. Validator method normally throws {@link IllegalArgumentException}

@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -30,15 +30,17 @@ package com.github.jonathanxd.buildergenerator.util;
 import com.github.jonathanxd.buildergenerator.annotation.PropertyInfo;
 import com.github.jonathanxd.buildergenerator.spec.BuilderSpec;
 import com.github.jonathanxd.buildergenerator.spec.PropertySpec;
-import com.github.jonathanxd.codeapi.CodeAPI;
-import com.github.jonathanxd.codeapi.CodePart;
-import com.github.jonathanxd.codeapi.base.MethodInvocation;
-import com.github.jonathanxd.codeapi.common.InvokeType;
-import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
-import com.github.jonathanxd.codeapi.common.TypeSpec;
-import com.github.jonathanxd.codeapi.literal.Literals;
-import com.github.jonathanxd.codeapi.type.CodeType;
-import com.github.jonathanxd.iutils.collection.CollectionUtils;
+import com.github.jonathanxd.iutils.collection.Collections3;
+import com.github.jonathanxd.kores.Instruction;
+import com.github.jonathanxd.kores.base.Access;
+import com.github.jonathanxd.kores.base.InvokeType;
+import com.github.jonathanxd.kores.base.MethodInvocation;
+import com.github.jonathanxd.kores.base.TypeSpec;
+import com.github.jonathanxd.kores.common.MethodTypeSpec;
+import com.github.jonathanxd.kores.factory.Factories;
+import com.github.jonathanxd.kores.factory.InvocationFactory;
+import com.github.jonathanxd.kores.literal.Literals;
+import com.github.jonathanxd.kores.type.KoresType;
 
 import java.util.List;
 import java.util.Optional;
@@ -60,8 +62,11 @@ public final class MethodInvocationUtil {
      * @param propertySpec   Property specification.
      * @return Invocation of the validator method.
      */
-    public static MethodInvocation validationToInvocation(boolean isThis, MethodTypeSpec methodTypeSpec, CodePart valueAccess, PropertySpec propertySpec) {
-        return MethodInvocationUtil.toInvocation(isThis, methodTypeSpec, CollectionUtils.listOf(valueAccess, Literals.STRING(propertySpec.getName()), Literals.CLASS(propertySpec.getType())));
+    public static MethodInvocation validationToInvocation(boolean isThis, MethodTypeSpec methodTypeSpec, Instruction valueAccess,
+                                                          PropertySpec propertySpec) {
+        return MethodInvocationUtil.toInvocation(isThis, methodTypeSpec,
+                Collections3.listOf(valueAccess, Literals.STRING(propertySpec.getName()),
+                        Literals.CLASS(propertySpec.getType())));
     }
 
     /**
@@ -71,8 +76,10 @@ public final class MethodInvocationUtil {
      * @param propertySpec   Property specification.
      * @return Invocation of default value method.
      */
-    public static MethodInvocation defaultValueToInvocation(boolean isThis, MethodTypeSpec methodTypeSpec, PropertySpec propertySpec) {
-        return MethodInvocationUtil.toInvocation(isThis, methodTypeSpec, CollectionUtils.listOf(Literals.STRING(propertySpec.getName()), Literals.CLASS(propertySpec.getType())));
+    public static MethodInvocation defaultValueToInvocation(boolean isThis, MethodTypeSpec methodTypeSpec,
+                                                            PropertySpec propertySpec) {
+        return MethodInvocationUtil.toInvocation(isThis, methodTypeSpec,
+                Collections3.listOf(Literals.STRING(propertySpec.getName()), Literals.CLASS(propertySpec.getType())));
     }
 
     /**
@@ -82,17 +89,18 @@ public final class MethodInvocationUtil {
      * @param arguments      Arguments to pass to method.
      * @return Method invocation.
      */
-    public static MethodInvocation toInvocation(boolean isThis, MethodTypeSpec methodTypeSpec, List<CodePart> arguments) {
+    public static MethodInvocation toInvocation(boolean isThis, MethodTypeSpec methodTypeSpec, List<Instruction> arguments) {
 
         InvokeType type = InvokeType.INVOKE_STATIC;
-        CodePart access = methodTypeSpec.getLocalization();
+        Instruction access = Access.STATIC;
 
-        if(isThis) {
+        if (isThis) {
             type = InvokeType.get(methodTypeSpec.getLocalization());
-            access = CodeAPI.accessThis();
+            access = Factories.accessThis();
         }
 
-        return CodeAPI.invoke(type, methodTypeSpec.getLocalization(), access, methodTypeSpec.getMethodName(), methodTypeSpec.getTypeSpec(), arguments);
+        return InvocationFactory.invoke(type, methodTypeSpec.getLocalization(), access, methodTypeSpec.getMethodName(),
+                methodTypeSpec.getTypeSpec(), arguments);
     }
 
     /**
@@ -102,16 +110,15 @@ public final class MethodInvocationUtil {
      * @param propertiesTypes Property types.
      * @param arguments       Arguments to pass to factory method.
      */
-    public static MethodInvocation createFactoryInvocation(BuilderSpec builderSpec, List<CodeType> propertiesTypes, List<CodePart> arguments) {
+    public static MethodInvocation createFactoryInvocation(BuilderSpec builderSpec, List<KoresType> propertiesTypes,
+                                                           List<Instruction> arguments) {
         Optional<String> factoryMethodName = builderSpec.getFactoryMethodName();
 
         TypeSpec typeSpec = new TypeSpec(builderSpec.getFactoryResultType(), propertiesTypes);
 
-        if (factoryMethodName.isPresent()) {
-            return CodeAPI.invokeStatic(builderSpec.getFactoryClass(), factoryMethodName.get(), typeSpec, arguments);
-        } else {
-            return CodeAPI.invokeConstructor(builderSpec.getFactoryClass(), typeSpec, arguments);
-        }
+        return factoryMethodName
+                .map(s -> InvocationFactory.invokeStatic(builderSpec.getFactoryClass(), s, typeSpec, arguments))
+                .orElseGet(() -> InvocationFactory.invokeConstructor(builderSpec.getFactoryClass(), typeSpec, arguments));
 
     }
 }

@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -30,20 +30,17 @@ package com.github.jonathanxd.buildergenerator.annotation;
 import com.github.jonathanxd.buildergenerator.unification.UnifiedDefaultImpl;
 import com.github.jonathanxd.buildergenerator.unification.UnifiedMethodRef;
 import com.github.jonathanxd.buildergenerator.unification.UnifiedValidator;
-import com.github.jonathanxd.codeapi.CodeAPI;
-import com.github.jonathanxd.codeapi.Types;
-import com.github.jonathanxd.codeapi.base.Annotation;
-import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
-import com.github.jonathanxd.codeapi.common.TypeSpec;
-import com.github.jonathanxd.codeapi.type.CodeType;
-import com.github.jonathanxd.codeapi.util.ArrayToList;
-import com.github.jonathanxd.iutils.array.ArrayUtils;
+import com.github.jonathanxd.iutils.collection.Collections3;
 import com.github.jonathanxd.iutils.condition.Conditions;
+import com.github.jonathanxd.iutils.object.Default;
+import com.github.jonathanxd.iutils.opt.OptObject;
+import com.github.jonathanxd.kores.base.Annotation;
+import com.github.jonathanxd.kores.base.TypeSpec;
+import com.github.jonathanxd.kores.common.MethodTypeSpec;
+import com.github.jonathanxd.kores.type.ImplicitKoresType;
+import com.github.jonathanxd.kores.type.KoresType;
 
-import org.jetbrains.annotations.Contract;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
+import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -64,14 +61,15 @@ public final class Conversions {
      *
      * @param methodRef Method reference to convert to {@link MethodTypeSpec}
      * @return {@link Optional} of {@link MethodTypeSpec} instance, or an empty {@link Optional} if
-     * the {@code methodRef} {@link Default#isDefault(MethodRef)}.
+     * the {@code methodRef} {@link DefaultUtil#isDefault(MethodRef)}.
      */
     public static Optional<MethodTypeSpec> toMethodSpec(MethodRef methodRef) {
-        if (methodRef == null || Default.isDefault(methodRef))
+        if (methodRef == null || DefaultUtil.isDefault(methodRef))
             return Optional.empty();
 
-        return Optional.of(new MethodTypeSpec(CodeAPI.getJavaType(methodRef.value()), methodRef.name(),
-                new TypeSpec(CodeAPI.getJavaType(methodRef.returnType()), CodeAPI.getJavaTypeList(methodRef.parameterTypes()))
+        return Optional.of(new MethodTypeSpec(methodRef.value(), methodRef.name(),
+                new TypeSpec(methodRef.returnType(),
+                        Collections3.listOf(methodRef.parameterTypes()))
         ));
     }
 
@@ -82,24 +80,28 @@ public final class Conversions {
      * @param rtype     Inferred return type.
      * @param ptypes    Inferred parameter types.
      * @return {@link Optional} of {@link MethodTypeSpec} instance, or an empty {@link Optional} if
-     * the {@code methodRef} {@link Default#isDefault(MethodRef)}.
+     * the {@code methodRef} {@link DefaultUtil#isDefault(MethodRef)}.
      */
-    public static Optional<MethodTypeSpec> toMethodSpec(MethodRef methodRef, Class<?> rtype, Class<?>[] ptypes) {
+    public static Optional<MethodTypeSpec> toMethodSpec(MethodRef methodRef, Class<?> rtype,
+                                                        Class<?>[] ptypes) {
 
-        if (methodRef == null || Default.isDefault(methodRef))
+        if (methodRef == null || DefaultUtil.isDefault(methodRef))
             return Optional.empty();
 
         if (methodRef.parameterTypes().length > 0)
-            Conditions.require(ptypes.length == methodRef.parameterTypes().length, "'methodRef.parameterTypes().length' must be equal to 'ptypes.length'!");
+            Conditions.require(ptypes.length == methodRef.parameterTypes().length,
+                    "'methodRef.parameterTypes().length' must be equal to 'ptypes.length'!");
 
-        return Optional.of(new MethodTypeSpec(CodeAPI.getJavaType(methodRef.value()), methodRef.name(),
-                new TypeSpec(
-                        Conversions.typeOr(methodRef.returnType(), rtype),
-                        ptypes.length > 0 && methodRef.parameterTypes().length == 0
-                                ? CodeAPI.getJavaTypeList(ptypes)
-                                : ArraysKt.mapIndexed(methodRef.parameterTypes(), (integer, aClass) -> typeOr(aClass, ptypes[integer]))
-                )
-        ));
+        return Optional
+                .of(new MethodTypeSpec(methodRef.value(), methodRef.name(),
+                        new TypeSpec(
+                                Conversions.typeOr(methodRef.returnType(), rtype),
+                                ptypes.length > 0 && methodRef.parameterTypes().length == 0
+                                        ? Collections3.listOf(ptypes)
+                                        : ArraysKt.mapIndexed(methodRef.parameterTypes(),
+                                        (integer, aClass) -> typeOr(aClass, ptypes[integer]))
+                        )
+                ));
     }
 
     /**
@@ -107,11 +109,11 @@ public final class Conversions {
      *
      * @param validator Validator instance to convert to {@link MethodTypeSpec}.
      * @return {@link Optional} of {@link MethodTypeSpec} instance, or an empty {@link Optional} if
-     * the {@code validator} {@link Default#isDefault(Validator)} or the {@link Validator#value()}
-     * is {@link Default#isDefault(MethodRef)}.
+     * the {@code validator} {@link DefaultUtil#isDefault(Validator)} or the {@link
+     * Validator#value()} is {@link DefaultUtil#isDefault(MethodRef)}.
      */
     public static Optional<MethodTypeSpec> toMethodSpec(Validator validator) {
-        if (validator == null || Default.isDefault(validator))
+        if (validator == null || DefaultUtil.isDefault(validator))
             return Optional.empty();
 
         return Conversions.toMethodSpec(validator.value());
@@ -124,11 +126,12 @@ public final class Conversions {
      * @param rtype     Inferred return type.
      * @param ptypes    Inferred parameter types.
      * @return {@link Optional} of {@link MethodTypeSpec} instance, or an empty {@link Optional} if
-     * the {@code validator} {@link Default#isDefault(Validator)} or the {@link Validator#value()}
-     * is {@link Default#isDefault(MethodRef)}.
+     * the {@code validator} {@link DefaultUtil#isDefault(Validator)} or the {@link
+     * Validator#value()} is {@link DefaultUtil#isDefault(MethodRef)}.
      */
-    public static Optional<MethodTypeSpec> toMethodSpec(Validator validator, Class<?> rtype, Class<?>[] ptypes) {
-        if (validator == null || Default.isDefault(validator))
+    public static Optional<MethodTypeSpec> toMethodSpec(Validator validator, Class<?> rtype,
+                                                        Class<?>[] ptypes) {
+        if (validator == null || DefaultUtil.isDefault(validator))
             return Optional.empty();
 
         return Conversions.toMethodSpec(validator.value(), rtype, ptypes);
@@ -138,13 +141,14 @@ public final class Conversions {
      * Convert {@link DefaultImpl} instance to {@link MethodTypeSpec}.
      *
      * @param defaultImpl DefaultImpl instance to convert to {@link MethodTypeSpec}.
-     * @param rtype     Inferred return type.
-     * @param ptypes    Inferred parameter types.
-     * @return {@link Optional} of {@link MethodTypeSpec} instance, or an empty {@link Optional} if the {@link DefaultImpl#value()}
-     * is {@link Default#isDefault(MethodRef)}.
+     * @param rtype       Inferred return type.
+     * @param ptypes      Inferred parameter types.
+     * @return {@link Optional} of {@link MethodTypeSpec} instance, or an empty {@link Optional} if
+     * the {@link DefaultImpl#value()} is {@link DefaultUtil#isDefault(MethodRef)}.
      */
-    public static Optional<MethodTypeSpec> toMethodSpec(DefaultImpl defaultImpl, Class<?> rtype, Class<?>[] ptypes) {
-        if (defaultImpl == null || Default.isDefault(defaultImpl.value()))
+    public static Optional<MethodTypeSpec> toMethodSpec(DefaultImpl defaultImpl, Class<?> rtype,
+                                                        Class<?>[] ptypes) {
+        if (defaultImpl == null || DefaultUtil.isDefault(defaultImpl.value()))
             return Optional.empty();
 
         return Conversions.toMethodSpec(defaultImpl.value(), rtype, ptypes);
@@ -159,14 +163,14 @@ public final class Conversions {
      * @return {@code alternative} if the {@code type} is {@link Default}, if not returns {@code
      * type}.
      */
-    private static CodeType typeOr(Class<?> type, Class<?> alternative) {
-        return CodeAPI.getJavaType((Class<?>) (type != Default.class ? type : alternative));
+    private static Type typeOr(Class<?> type, Class<?> alternative) {
+        return DefaultUtil.isDefaultType(type) ? type : alternative;
     }
 
     /**
-     * CodeAPI version of methods.
+     * Kores version of methods.
      */
-    public static class CAPI {
+    public static class KRS {
 
         /**
          * Convert {@link Validator} {@link Annotation} instance to {@link MethodTypeSpec}.
@@ -176,14 +180,14 @@ public final class Conversions {
          *
          * @param validator Validator instance to convert to {@link MethodTypeSpec}.
          * @return {@link Optional} of {@link MethodTypeSpec} instance, or an empty {@link Optional}
-         * if the {@code validator} {@link Default#isDefault(Validator)} or the {@link
-         * Validator#value()} is {@link Default#isDefault(MethodRef)}.
+         * if the {@code validator} {@link DefaultUtil#isDefault(Validator)} or the {@link
+         * Validator#value()} is {@link DefaultUtil#isDefault(MethodRef)}.
          */
         public static Optional<MethodTypeSpec> validatorToMethodSpec(UnifiedValidator validator) {
-            if (validator == null || Default.isDefaultValidator(validator))
+            if (validator == null || DefaultUtil.isDefaultValidator(validator))
                 return Optional.empty();
 
-            return Conversions.CAPI.toMethodSpec(validator.value());
+            return KRS.toMethodSpec(validator.value());
         }
 
         /**
@@ -196,14 +200,16 @@ public final class Conversions {
          * @param rtype     Inferred return type.
          * @param ptypes    Inferred parameter types.
          * @return {@link Optional} of {@link MethodTypeSpec} instance, or an empty {@link Optional}
-         * if the {@code validator} {@link Default#isDefault(Validator)} or the {@link
-         * Validator#value()} is {@link Default#isDefault(MethodRef)}.
+         * if the {@code validator} {@link DefaultUtil#isDefault(Validator)} or the {@link
+         * Validator#value()} is {@link DefaultUtil#isDefault(MethodRef)}.
          */
-        public static Optional<MethodTypeSpec> validatorToMethodSpec(UnifiedValidator validator, CodeType rtype, CodeType[] ptypes) {
-            if (validator == null || Default.isDefaultValidator(validator))
+        public static Optional<MethodTypeSpec> validatorToMethodSpec(UnifiedValidator validator,
+                                                                     KoresType rtype,
+                                                                     KoresType[] ptypes) {
+            if (validator == null || DefaultUtil.isDefaultValidator(validator))
                 return Optional.empty();
 
-            return Conversions.CAPI.toMethodSpec(validator.value(), rtype, ptypes);
+            return KRS.toMethodSpec(validator.value(), rtype, ptypes);
         }
 
         /**
@@ -212,20 +218,23 @@ public final class Conversions {
          *
          * @param methodRef Method reference to convert to {@link MethodTypeSpec}
          * @return {@link Optional} of {@link MethodTypeSpec} instance, or an empty {@link Optional}
-         * if the {@code methodRef} {@link Default#isDefault(MethodRef)}.
+         * if the {@code methodRef} {@link DefaultUtil#isDefault(MethodRef)}.
          * @see #toMethodSpec(MethodRef)
          */
         @SuppressWarnings("unchecked")
         public static Optional<MethodTypeSpec> toMethodSpec(UnifiedMethodRef methodRef) {
-            if (methodRef == null || Default.isDefaultMethodRef(methodRef))
+            if (methodRef == null || DefaultUtil.isDefaultMethodRef(methodRef))
                 return Optional.empty();
 
-            CodeType value = methodRef.value();
+            Type value = methodRef.value();
             String name = methodRef.name();
-            CodeType returnType = notNull(methodRef.returnType(), Types.VOID, "'returnType' property not set");
-            List<? extends CodeType> parameterTypes = notNull(getTypes(methodRef.parameterTypes()), Collections.emptyList(), "'parameterTypes' property not set");
+            Type returnType = methodRef.returnType().orElse(Void.TYPE);
 
-            return Optional.of(new MethodTypeSpec(value, name, new TypeSpec(returnType, parameterTypes)));
+            List<? extends Type> parameterTypes = methodRef.parameterTypes()
+                    .orElse(Collections.emptyList());
+
+            return Optional
+                    .of(new MethodTypeSpec(value, name, new TypeSpec(returnType, parameterTypes)));
         }
 
         /**
@@ -235,34 +244,41 @@ public final class Conversions {
          * @param rtype  Inferred return type.
          * @param ptypes Inferred parameter types.
          * @return {@link Optional} of {@link MethodTypeSpec} instance, or an empty {@link Optional}
-         * if the {@code validator} {@link Default#isDefault(Validator)} or the {@link
-         * Validator#value()} is {@link Default#isDefault(MethodRef)}.
+         * if the {@code validator} {@link DefaultUtil#isDefault(Validator)} or the {@link
+         * Validator#value()} is {@link DefaultUtil#isDefault(MethodRef)}.
          * @see #toMethodSpec(MethodRef, Class, Class[])
          */
         @SuppressWarnings("unchecked")
-        public static Optional<MethodTypeSpec> toMethodSpec(UnifiedMethodRef methodRef, CodeType rtype, CodeType[] ptypes) {
+        public static Optional<MethodTypeSpec> toMethodSpec(UnifiedMethodRef methodRef,
+                                                            Type rtype, Type[] ptypes) {
 
-            if (methodRef == null || Default.isDefaultMethodRef(methodRef))
+            if (methodRef == null || DefaultUtil.isDefaultMethodRef(methodRef))
                 return Optional.empty();
 
-            CodeType value = methodRef.value();
+            Type value = methodRef.value();
             String name = methodRef.name();
-            CodeType returnType = notNull(methodRef.returnType(), rtype, "'returnType' property not set");
+            Type returnType = methodRef.returnType().orElse(rtype);
 
-            List<? extends CodeType> parameterTypes = notNull(getTypes(methodRef.parameterTypes()),
-                    ptypes == null ? null : Arrays.asList(ptypes), "'parameterTypes' property not set");
+            List<? extends Type> parameterTypes = methodRef.parameterTypes()
+                    .or(() -> ptypes == null ? OptObject.none() : OptObject
+                            .some(Arrays.asList(ptypes)))
+                    .orElseFailStupidly(() -> new IllegalArgumentException(
+                            "'parameterTypes' property not set!"));
 
             if (parameterTypes.size() > 0) {
-                if(ptypes != null)
-                    Conditions.require(ptypes.length == parameterTypes.size(), "'methodRef.parameterTypes().length' must be equal to 'ptypes.length'!");
+                if (ptypes != null)
+                    Conditions.require(ptypes.length == parameterTypes.size(),
+                            "'methodRef.parameterTypes().length' must be equal to 'ptypes.length'!");
             }
 
             return Optional.of(new MethodTypeSpec(value, name,
                     new TypeSpec(
-                            Conversions.CAPI.typeOr(returnType, rtype),
+                            KRS.typeOr(returnType, rtype),
                             ptypes != null && ptypes.length > 0 && parameterTypes.size() == 0
                                     ? Arrays.asList(ptypes)
-                                    : CollectionsKt.mapIndexed(parameterTypes, (integer, aClass) -> typeOr(aClass, ptypes == null ? null : ptypes[integer]))
+                                    : CollectionsKt.mapIndexed(parameterTypes,
+                                    (integer, aClass) -> typeOr(aClass,
+                                            ptypes == null ? null : ptypes[integer]))
                     )
             ));
         }
@@ -273,46 +289,33 @@ public final class Conversions {
          *
          * @param rtype  Inferred return type.
          * @param ptypes Inferred parameter types.
-         * @return {@link Optional} of {@link MethodTypeSpec} instance, or an empty {@link Optional} if the {@link
-         * DefaultImpl#value()} is {@link Default#isDefault(MethodRef)}.
+         * @return {@link Optional} of {@link MethodTypeSpec} instance, or an empty {@link Optional}
+         * if the {@link DefaultImpl#value()} is {@link DefaultUtil#isDefault(MethodRef)}.
          * @see #toMethodSpec(DefaultImpl, Class, Class[])
          */
         @SuppressWarnings("unchecked")
-        public static Optional<MethodTypeSpec> defaultImplToMethodSpec(UnifiedDefaultImpl defaultImpl, CodeType rtype, CodeType[] ptypes) {
+        public static Optional<MethodTypeSpec> defaultImplToMethodSpec(
+                UnifiedDefaultImpl defaultImpl, KoresType rtype, KoresType[] ptypes) {
 
-            if (defaultImpl == null || Default.isDefaultDefaultImpl(defaultImpl))
+            if (defaultImpl == null || DefaultUtil.isDefaultDefaultImpl(defaultImpl))
                 return Optional.empty();
 
-            return Conversions.CAPI.toMethodSpec(defaultImpl.value(), rtype, ptypes);
+            return KRS.toMethodSpec(defaultImpl.value(), rtype, ptypes);
         }
 
         /**
-         * If the {@code type} is {@link Default} returns {@code alternative}, if not returns {@code
-         * type}.
+         * If the {@code type} is {@link DefaultUtil} returns {@code alternative}, if not returns
+         * {@code type}.
          *
          * @param type        Type.
          * @param alternative Alternative type.
-         * @return {@code alternative} if the {@code type} is {@link Default}, if not returns {@code
-         * type}.
+         * @return {@code alternative} if the {@code type} is {@link DefaultUtil}, if not returns
+         * {@code type}.
          */
-        private static CodeType typeOr(CodeType type, CodeType alternative) {
-            return (!type.is(CodeAPI.getJavaType(Default.class)) ? type : Objects.requireNonNull(alternative));
-        }
-
-        private static List<? extends CodeType> getTypes(CodeType[] types) {
-            if(types.length == 0)
-                return null;
-
-            return ArrayToList.toList(types);
-        }
-
-        @Contract(pure = true)
-        @NotNull
-        private static <T> T notNull(@Nullable T input, @Nullable T other, String message) {
-            if(input == null || (input instanceof CodeType && ((CodeType) input).is(CodeAPI.getJavaType(Default.class))))
-                return Objects.requireNonNull(other, message);
-
-            return input;
+        private static Type typeOr(Type type, Type alternative) {
+            return (!ImplicitKoresType.is(type, Default.class)
+                    ? type
+                    : Objects.requireNonNull(alternative));
         }
     }
 }

@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -27,64 +27,60 @@
  */
 package com.github.jonathanxd.buildergenerator.util;
 
-import com.github.jonathanxd.codeapi.CodeAPI;
-import com.github.jonathanxd.codeapi.type.CodeType;
-import com.github.jonathanxd.codeapi.type.GenericType;
-import com.github.jonathanxd.codeapi.type.PlainCodeType;
-import com.github.jonathanxd.codeapi.util.GenericTypeUtil;
-import com.github.jonathanxd.codeapi.util.ModelCodeTypesKt;
-import com.github.jonathanxd.codeapi.util.TypeElementCodeType;
-import com.github.jonathanxd.iutils.type.TypeInfo;
+import com.github.jonathanxd.iutils.type.TypeUtil;
+import com.github.jonathanxd.kores.type.KoresType;
+import com.github.jonathanxd.kores.type.KoresTypes;
+import com.github.jonathanxd.kores.type.ModelKoresTypesKt;
+import com.github.jonathanxd.kores.util.GenericTypeUtil;
 
-import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 
 /**
- * {@link TypeElement} and {@link TypeMirror} conversion to {@link CodeType}.
+ * {@link TypeElement} and {@link TypeMirror} conversion to {@link KoresType}.
  */
 public class TypeElementUtil {
 
 
     /**
-     * Convert {@link TypeMirror} to {@link CodeType}.
+     * Convert {@link TypeMirror} to {@link KoresType}.
      *
      * @param typeMirror Type mirror.
-     * @return {@link CodeType} corresponding to {@link TypeMirror}.
+     * @return {@link KoresType} corresponding to {@link TypeMirror}.
      */
-    public static CodeType fromGenericMirror(TypeMirror typeMirror) {
-        CodeType codeType = ModelCodeTypesKt.toCodeType(typeMirror, false);
+    public static KoresType fromGenericMirror(TypeMirror typeMirror, Elements elements) {
+        KoresType KoresType = ModelKoresTypesKt.toKoresType(typeMirror, false, elements);
 
-        /*while (codeType instanceof GenericType)
-            codeType = ((GenericType) codeType).getCodeType();*/
+        /*while (KoresType instanceof GenericType)
+            KoresType = ((GenericType) KoresType).getKoresType();*/
 
-        return codeType;
+        return KoresType;
     }
 
     /**
-     * Convert {@link TypeMirror} to {@link CodeType}.
+     * Convert {@link TypeMirror} to {@link KoresType}.
      *
      * @param typeMirror Type mirror.
      * @param elements   Element utils to resolve type.
-     * @return {@link CodeType} corresponding to {@link TypeMirror}.
+     * @return {@link KoresType} corresponding to {@link TypeMirror}.
      */
-    public static CodeType toCodeType(TypeMirror typeMirror, Elements elements) {
+    public static KoresType toKoresType(TypeMirror typeMirror, Elements elements) {
         return GenericTypeUtil.fromSourceString(typeMirror.toString(), new TypeResolver(elements));
     }
 
     /**
-     * Convert {@link TypeElement} to {@link CodeType}.
+     * Convert {@link TypeElement} to {@link KoresType}.
      *
      * @param typeElement Type element.
-     * @return {@link CodeType} corresponding to {@link TypeElement}.
+     * @return {@link KoresType} corresponding to {@link TypeElement}.
      */
-    public static CodeType toCodeType(TypeElement typeElement) {
+    public static KoresType toKoresType(TypeElement typeElement, Elements elements) {
         return GenericTypeUtil.fromSourceString(typeElement.getQualifiedName().toString(), s -> {
             try {
-                return CodeAPI.getJavaType(TypeInfo.resolveClass(s));
+                return KoresTypes.getKoresType(TypeUtil.resolveClass(s));
             } catch (Exception e) {
-                return new TypeElementCodeType(typeElement);
+                return ModelKoresTypesKt.getKoresType(typeElement, elements);
             }
         });
     }
@@ -98,6 +94,8 @@ public class TypeElementUtil {
      * @see Elements#getTypeElement(CharSequence)
      */
     public static TypeElement toTypeElement(TypeMirror typeMirror, Elements elements) {
-        return elements.getTypeElement(GenericTypeUtil.fromSourceString(typeMirror.toString(), new TypeResolver(elements)).getCanonicalName());
+        return elements
+                .getTypeElement(GenericTypeUtil.fromSourceString(typeMirror.toString(), new TypeResolver(elements))
+                        .getCanonicalName());
     }
 }

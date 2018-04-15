@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -28,6 +28,7 @@
 package com.github.jonathanxd.buildergenerator.annotation;
 
 import com.github.jonathanxd.buildergenerator.spec.PropertySpec;
+import com.github.jonathanxd.iutils.object.Default;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -45,11 +46,11 @@ import java.lang.annotation.Target;
 public @interface PropertyInfo {
 
     /**
-     * Is property nullable (can receive null values).
+     * Whether property is nullable or not.
      *
      * This property will be ignored if the property is of Optional type.
      *
-     * @return Is property nullable (can receive null values).
+     * @return Whether property nullable (can receive null values).
      */
     boolean isNullable() default false;
 

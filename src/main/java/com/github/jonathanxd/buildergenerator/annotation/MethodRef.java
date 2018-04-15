@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -26,6 +26,8 @@
  *      THE SOFTWARE.
  */
 package com.github.jonathanxd.buildergenerator.annotation;
+
+import com.github.jonathanxd.iutils.object.Default;
 
 import java.lang.annotation.Target;
 
@@ -57,7 +59,7 @@ public @interface MethodRef {
      *
      * @return Method parameter types.
      */
-    Class<?>[] parameterTypes() default {};
+    Class<?>[] parameterTypes() default {Default.class};
 
     /**
      * Name of the method.

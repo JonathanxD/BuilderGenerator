@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -28,7 +28,7 @@
 package com.github.jonathanxd.buildergenerator;
 
 import com.github.jonathanxd.buildergenerator.spec.BuilderSpec;
-import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
+import com.github.jonathanxd.kores.common.MethodTypeSpec;
 
 import java.util.List;
 import java.util.function.Consumer;

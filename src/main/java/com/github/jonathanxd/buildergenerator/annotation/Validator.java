@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -40,6 +40,9 @@ import java.lang.annotation.Target;
  * {@link Inline} has different rules, the rules depends on the implementation of the {@link
  * com.github.jonathanxd.buildergenerator.BuilderGenerator}. {@link Inline} documentation explain
  * these rules.
+ *
+ * Also you can use {@link Super} and implement the method with validation code instead of
+ * annotating it with {@link Validator}.
  */
 @Target({})
 public @interface Validator {

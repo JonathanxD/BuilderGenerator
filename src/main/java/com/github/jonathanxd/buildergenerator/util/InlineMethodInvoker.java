@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -27,12 +27,12 @@
  */
 package com.github.jonathanxd.buildergenerator.util;
 
-import com.github.jonathanxd.codeapi.CodePart;
+import com.github.jonathanxd.kores.Instruction;
 
 import java.util.function.Function;
 
 /**
  * Invoker of a {@link com.github.jonathanxd.buildergenerator.annotation.Inline Inlinable method}.
  */
-public interface InlineMethodInvoker extends Function<Object[], CodePart> {
+public interface InlineMethodInvoker extends Function<Object[], Instruction> {
 }

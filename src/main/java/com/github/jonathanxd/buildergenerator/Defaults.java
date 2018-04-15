@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -28,17 +28,16 @@
 package com.github.jonathanxd.buildergenerator;
 
 import com.github.jonathanxd.buildergenerator.annotation.Inline;
-import com.github.jonathanxd.codeapi.CodeAPI;
-import com.github.jonathanxd.codeapi.CodePart;
-import com.github.jonathanxd.codeapi.Types;
-import com.github.jonathanxd.codeapi.base.MethodDeclaration;
-import com.github.jonathanxd.codeapi.base.VariableBase;
-import com.github.jonathanxd.codeapi.common.TypeSpec;
-import com.github.jonathanxd.codeapi.literal.Literals;
-import com.github.jonathanxd.codeapi.type.CodeType;
-import com.github.jonathanxd.codeapi.util.Alias;
-import com.github.jonathanxd.iutils.collection.CollectionUtils;
+import com.github.jonathanxd.iutils.collection.Collections3;
 import com.github.jonathanxd.iutils.condition.Conditions;
+import com.github.jonathanxd.kores.Instruction;
+import com.github.jonathanxd.kores.Types;
+import com.github.jonathanxd.kores.base.Alias;
+import com.github.jonathanxd.kores.base.MethodDeclaration;
+import com.github.jonathanxd.kores.base.TypeSpec;
+import com.github.jonathanxd.kores.factory.Factories;
+import com.github.jonathanxd.kores.factory.InvocationFactory;
+import com.github.jonathanxd.kores.type.KoresType;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -51,9 +50,9 @@ import java.util.function.Function;
 /**
  * Common default implementations.
  *
- * All {@code DefaultImpl providers} here are {@link Inline} to avoid dependency on {@code
- * BytecodeGenerator}. This means that you don't need to have {@code BytecodeGenerator} in class
- * path even you reference these methods from {@link com.github.jonathanxd.buildergenerator.annotation.MethodRef}.
+ * All {@code DefaultImpl providers} here are {@link Inline} to avoid dependency on {@code BytecodeGenerator}. This means that you
+ * don't need to have {@code BytecodeGenerator} in class path even you reference these methods from {@link
+ * com.github.jonathanxd.buildergenerator.annotation.MethodRef}.
  */
 public final class Defaults {
     private Defaults() {
@@ -64,47 +63,50 @@ public final class Defaults {
      * Returns self instance.
      */
     @Inline
-    public static CodePart self(MethodDeclaration methodDeclaration, List<CodePart> arguments) {
-        return CodeAPI.returnValue(methodDeclaration.getReturnType(), CodeAPI.accessThis());
+    public static Instruction self(MethodDeclaration methodDeclaration, List<Instruction> arguments) {
+        return Factories.returnValue(methodDeclaration.getReturnType(), Factories.accessThis());
     }
 
     /**
-     * Convert box vararg into a list and call the same method with {@link List} as parameter type instead of
-     * vararg.
+     * Convert box vararg into a list and call the same method with {@link List} as parameter type instead of vararg.
      *
      * {@link Arrays#asList}
      */
     @Inline
-    public static CodePart varArgToList(MethodDeclaration methodDeclaration, List<CodePart> arguments) {
+    public static Instruction varArgToList(MethodDeclaration methodDeclaration, List<Instruction> arguments) {
         Conditions.require(arguments.size() == 1, "Only method with single parameter is supported!");
 
-        return Defaults.transform(methodDeclaration, arguments, Types.LIST, codePart -> Collections.singletonList(CodeAPI.invokeStatic(Arrays.class, "asList", CodeAPI.typeSpec(Object[].class), arguments)));
+        return Defaults.transform(methodDeclaration, arguments, Types.LIST, codePart -> Collections.singletonList(
+                InvocationFactory.invokeStatic(Arrays.class, "asList", Factories.typeSpec(Object[].class), arguments)));
     }
 
     /**
-     * Convert box vararg into a set and call the same method with {@link Set} as parameter type instead of
-     * vararg.
+     * Convert box vararg into a set and call the same method with {@link Set} as parameter type instead of vararg.
      *
-     * {@link Arrays#asList}
-     * {@link HashSet}
+     * {@link Arrays#asList} {@link HashSet}
      */
     @Inline
-    public static CodePart varArgToSet(MethodDeclaration methodDeclaration, List<CodePart> arguments) {
+    public static Instruction varArgToSet(MethodDeclaration methodDeclaration, List<Instruction> arguments) {
         Conditions.require(arguments.size() == 1, "Only method with single parameter is supported!");
 
         return Defaults.transform(methodDeclaration, arguments, Types.SET, codePart -> Collections.singletonList(
-                CodeAPI.invokeConstructor(CodeAPI.getJavaType(HashSet.class), CodeAPI.typeSpec(Collection.class), Collections.singletonList(CodeAPI.invokeStatic(Arrays.class, "asList", CodeAPI.typeSpec(Object[].class), arguments)))));
+                InvocationFactory.invokeConstructor(HashSet.class, Factories.constructorTypeSpec(Collection.class),
+                        Collections.singletonList(
+                                InvocationFactory.invokeStatic(Arrays.class, "asList", Factories.typeSpec(Object[].class),
+                                        arguments)))));
     }
 
     /**
      * Transform input arguments.
      */
-    private static CodePart transform(MethodDeclaration methodDeclaration, List<CodePart> arguments, CodeType type, Function<List<CodePart>, List<CodePart>> transformer) {
+    private static Instruction transform(MethodDeclaration methodDeclaration, List<Instruction> arguments, KoresType type,
+                                         Function<List<Instruction>, List<Instruction>> transformer) {
 
-        TypeSpec typeSpec = new TypeSpec(methodDeclaration.getReturnType(), CollectionUtils.listOf(type));
+        TypeSpec typeSpec = new TypeSpec(methodDeclaration.getReturnType(), Collections3.listOf(type));
 
-        return CodeAPI.returnValue(methodDeclaration.getReturnType(),
-                CodeAPI.invokeInterface(Alias.THIS.INSTANCE, CodeAPI.accessThis(), methodDeclaration.getName(), typeSpec,
+        return Factories.returnValue(methodDeclaration.getReturnType(),
+                InvocationFactory.invokeInterface(Alias.THIS.INSTANCE, Factories.accessThis(), methodDeclaration.getName(),
+                        typeSpec,
                         transformer.apply(arguments)));
     }
 

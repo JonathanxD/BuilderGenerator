@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -30,14 +30,15 @@ package com.github.jonathanxd.buildergenerator.apt;
 import com.github.jonathanxd.buildergenerator.annotation.Conversions;
 import com.github.jonathanxd.buildergenerator.unification.UnifiedMethodRef;
 import com.github.jonathanxd.buildergenerator.util.TypeElementUtil;
-import com.github.jonathanxd.codeapi.Types;
-import com.github.jonathanxd.codeapi.base.Annotation;
-import com.github.jonathanxd.codeapi.common.MethodTypeSpec;
-import com.github.jonathanxd.codeapi.type.CodeType;
 import com.github.jonathanxd.iutils.object.Pair;
+import com.github.jonathanxd.kores.Types;
+import com.github.jonathanxd.kores.common.MethodTypeSpec;
+import com.github.jonathanxd.kores.type.ImplicitKoresType;
+import com.github.jonathanxd.kores.type.KoresType;
 
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Optional;
 
@@ -55,32 +56,31 @@ public class AptResolver {
     /**
      * Resolves the method reference.
      *
-     * @param unifiedMethodRef {@link com.github.jonathanxd.buildergenerator.annotation.MethodRef}
-     *                            annotation.
-     * @param rtype               Inferred return type (if annotation property is defined, this
-     *                            value will be ignored).
-     * @param ptypes              Inferred parameter types (if annotation property is defined, this
-     *                            value will be ignored).
-     * @param elements            Element utilities.
-     * @return Null if cannot convert the annotation to {@link MethodTypeSpec} or a Pair of {@link
-     * MethodTypeSpec method specification} and {@link ExecutableElement found method} (or null
-     * {@link ExecutableElement} if the method cannot be found).
-     * @see Conversions.CAPI#toMethodSpec(UnifiedMethodRef, CodeType, CodeType[])
+     * @param unifiedMethodRef {@link com.github.jonathanxd.buildergenerator.annotation.MethodRef} annotation.
+     * @param rtype            Inferred return type (if annotation property is defined, this value will be ignored).
+     * @param ptypes           Inferred parameter types (if annotation property is defined, this value will be ignored).
+     * @param elements         Element utilities.
+     * @return Null if cannot convert the annotation to {@link MethodTypeSpec} or a Pair of {@link MethodTypeSpec method
+     * specification} and {@link ExecutableElement found method} (or null {@link ExecutableElement} if the method cannot be
+     * found).
+     * @see Conversions.KRS#toMethodSpec(UnifiedMethodRef, Type, Type[])
      */
     @Nullable
-    public static Pair<MethodTypeSpec, ExecutableElement> resolveMethodRef(UnifiedMethodRef unifiedMethodRef, CodeType rtype, CodeType[] ptypes, Elements elements) {
+    public static Pair<MethodTypeSpec, ExecutableElement> resolveMethodRef(UnifiedMethodRef unifiedMethodRef, Type rtype,
+                                                                           Type[] ptypes, Elements elements) {
 
-        Optional<MethodTypeSpec> methodTypeSpec = Conversions.CAPI.toMethodSpec(unifiedMethodRef, rtype, ptypes);
+        Optional<MethodTypeSpec> methodTypeSpec = Conversions.KRS
+                .toMethodSpec(unifiedMethodRef, rtype, ptypes);
 
         if (methodTypeSpec.isPresent()) {
             MethodTypeSpec spec = methodTypeSpec.get();
 
-            CodeType enclosingType = spec.getLocalization();
+            Type enclosingType = spec.getLocalization();
             String name = spec.getMethodName();
-            CodeType returnType = spec.getTypeSpec().getReturnType();
-            List<CodeType> parameterTypes = spec.getTypeSpec().getParameterTypes();
+            Type returnType = spec.getTypeSpec().getReturnType();
+            List<Type> parameterTypes = spec.getTypeSpec().getParameterTypes();
 
-            TypeElement enclosingElement = elements.getTypeElement(enclosingType.getCanonicalName());
+            TypeElement enclosingElement = elements.getTypeElement(ImplicitKoresType.getCanonicalName(enclosingType));
 
             return Pair.of(spec, elements.getAllMembers(enclosingElement)
                     .stream()
@@ -92,9 +92,10 @@ public class AptResolver {
                                     || executableElement.getSimpleName().contentEquals(name);
 
                             boolean returnMatch =
-                                    executableElement.getKind() == ElementKind.CONSTRUCTOR && returnType.is(Types.VOID)
-                                            || TypeElementUtil.toCodeType(executableElement.getReturnType(), elements)
-                                            .getJavaSpecName().equals(returnType.getJavaSpecName());
+                                    executableElement.getKind() == ElementKind.CONSTRUCTOR
+                                            && ImplicitKoresType.isConcreteIdEq(returnType, Types.VOID)
+                                            || TypeElementUtil.toKoresType(executableElement.getReturnType(), elements)
+                                            .getJavaSpecName().equals(ImplicitKoresType.getJavaSpecName(returnType));
 
                             boolean parametersMatch = true;
 
@@ -102,8 +103,8 @@ public class AptResolver {
 
                             if (parameters.size() == parameterTypes.size()) {
                                 for (int i = 0; i < parameters.size(); i++) {
-                                    CodeType codeType = TypeElementUtil.toCodeType(parameters.get(i).asType(), elements);
-                                    if (!codeType.getJavaSpecName().equals(parameterTypes.get(i).getJavaSpecName())) {
+                                    KoresType koresType = TypeElementUtil.toKoresType(parameters.get(i).asType(), elements);
+                                    if (!ImplicitKoresType.isConcreteIdEq(koresType, parameterTypes.get(i))) {
                                         parametersMatch = false;
                                         break;
                                     }

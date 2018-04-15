@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -27,6 +27,8 @@
  */
 package com.github.jonathanxd.buildergenerator.annotation;
 
+import com.github.jonathanxd.iutils.object.Default;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -49,8 +51,6 @@ public @interface GenBuilder {
      *
      * The base class MUST have an inner-class interface 'Builder' that extends {@link
      * com.github.jonathanxd.buildergenerator.Builder}.
-     *
-     * See the builder style in javadoc.
      *
      * If this annotation is present in a constructor, this property must be defined, if the
      * annotation is present in a factory method, the return type will be used as base class.

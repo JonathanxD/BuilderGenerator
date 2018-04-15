@@ -3,7 +3,7 @@
  *
  *         The MIT License (MIT)
  *
- *      Copyright (c) 2017 JonathanxD
+ *      Copyright (c) 2018 JonathanxD
  *      Copyright (c) contributors
  *
  *
@@ -40,8 +40,7 @@ public class ExecutableElementsUtil {
      *
      * @param elements List of elements.
      * @param name     Name of element to find.
-     * @return {@link Optional} of found {@link ExecutableElement}, empty {@link Optional}
-     * otherwise.
+     * @return {@link Optional} of found {@link ExecutableElement}, empty {@link Optional} otherwise.
      */
     public static Optional<ExecutableElement> get(List<? extends ExecutableElement> elements, String name) {
         for (ExecutableElement element : elements) {
